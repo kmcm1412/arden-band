@@ -1,0 +1,96 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper functions ─────────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasActiveMembership() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/memberships/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/memberships/$(request.auth.uid)).data.active == true;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/memberships/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/memberships/$(request.auth.uid)).data.role == 'admin' &&
+        get(/databases/$(database)/documents/memberships/$(request.auth.uid)).data.active == true;
+    }
+
+    function isMember() {
+      return hasActiveMembership();
+    }
+
+    // ─── Public data ──────────────────────────────────────────────────────────
+
+    // Shows: public can read public shows; only admins can write
+    match /shows/{showId} {
+      allow read: if resource.data.isPublic == true || isMember();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Merch: public read; admin write
+    match /merch/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Media: public read; admin write
+    match /media/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Contact messages: anyone can submit; only members can read
+    match /contactMessages/{msgId} {
+      allow create: if true;
+      allow read, update, delete: if isMember();
+    }
+
+    // ─── Private / member-only ────────────────────────────────────────────────
+
+    // Memberships: only server-side (admin SDK) can write
+    // Members can read their own doc; admins can read all
+    match /memberships/{uid} {
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == uid);
+      allow write: if false; // Server-side only via Admin SDK
+    }
+
+    // Availabilities: members manage their own; all members can read all
+    match /availabilities/{uid} {
+      allow read: if isMember();
+      allow create, update: if isMember() && request.auth.uid == uid;
+      allow delete: if isAdmin() || (isMember() && request.auth.uid == uid);
+    }
+
+    // Set lists: all members read/write; no public access
+    match /setlists/{setlistId} {
+      allow read, write: if isMember();
+    }
+
+    // Opportunities: all members read/write; no public access
+    match /opportunities/{oppId} {
+      allow read, write: if isMember();
+    }
+
+    // Outreach drafts: all members read/write
+    match /outreachDrafts/{draftId} {
+      allow read, write: if isMember();
+    }
+
+    // Users collection: own doc only
+    match /users/{uid} {
+      allow read, write: if isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

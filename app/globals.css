@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --color-arden-black: #0a0a0a;
+  --color-arden-dark: #111111;
+  --color-arden-surface: #1a1a1a;
+  --color-arden-border: #2a2a2a;
+  --color-arden-muted: #3a3a3a;
+  --color-arden-text: #e8e8e8;
+  --color-arden-subtext: #888888;
+  --color-arden-accent: #c8a96e;
+  --color-arden-accent-dim: #a08050;
+  --color-arden-white: #f5f5f5;
+
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-playfair), Georgia, serif;
+
+  --animate-fade-in: fadeIn 0.6s ease-out forwards;
+  --animate-slide-up: slideUp 0.6s ease-out forwards;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #0a0a0a;
+    color: #e8e8e8;
+    font-family: var(--font-inter), system-ui, sans-serif;
+  }
+
+  ::selection {
+    background: #c8a96e;
+    color: #0a0a0a;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #111111;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #c8a96e;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-6 py-3 bg-arden-accent text-arden-black font-semibold text-sm tracking-wide uppercase transition-all duration-200 hover:bg-arden-white hover:scale-105 active:scale-100;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-6 py-3 border border-arden-border text-arden-text font-medium text-sm tracking-wide uppercase transition-all duration-200 hover:border-arden-accent hover:text-arden-accent;
+  }
+
+  .section-label {
+    @apply text-xs font-semibold tracking-[0.25em] uppercase text-arden-accent;
+  }
+
+  .heading-display {
+    @apply font-display font-bold leading-tight tracking-tight;
+  }
+}
