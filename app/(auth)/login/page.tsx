@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 import { auth } from '@/lib/firebase/client'
@@ -49,9 +50,9 @@ export default function LoginPage() {
     <div className="min-h-screen bg-arden-black flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="mb-10">
-          <a href="/" className="font-display text-2xl font-bold tracking-widest text-arden-white hover:text-arden-accent transition-colors">
+          <Link href="/" className="font-display text-2xl font-bold tracking-widest text-arden-white hover:text-arden-accent transition-colors">
             ARDEN
-          </a>
+          </Link>
           <p className="text-arden-subtext text-sm mt-2 tracking-wider uppercase">Band Portal</p>
         </div>
 
