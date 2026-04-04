@@ -35,6 +35,9 @@ export const db: Firestore = new Proxy({} as Firestore, {
     const value = (instance as unknown as Record<string | symbol, unknown>)[prop]
     return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(instance) : value
   },
+  getPrototypeOf(_target) {
+    return Object.getPrototypeOf(getFirestore(getApp()))
+  },
 })
 
 export const storage: FirebaseStorage = new Proxy({} as FirebaseStorage, {
