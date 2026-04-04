@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 
 export default function SubscribeForm() {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [showPhone, setShowPhone] = useState(false)
@@ -20,7 +21,7 @@ export default function SubscribeForm() {
       const res = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, phone: phone || undefined }),
+        body: JSON.stringify({ name: name || undefined, email, phone: phone || undefined }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -29,6 +30,7 @@ export default function SubscribeForm() {
       } else {
         setStatus('success')
         setMessage("You're in. We'll keep you posted.")
+        setName('')
         setEmail('')
         setPhone('')
         setShowPhone(false)
@@ -47,29 +49,39 @@ export default function SubscribeForm() {
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="flex flex-col sm:flex-row gap-2">
+      <div className="flex flex-col gap-2 mb-2">
         <input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="your@email.com"
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Your name"
           required
-          className="flex-1 bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
+          className="w-full bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
         />
-        <button
-          type="submit"
-          disabled={status === 'loading'}
-          className="btn-primary text-xs py-2.5 px-5 disabled:opacity-50 whitespace-nowrap"
-        >
-          {status === 'loading' ? 'Saving...' : 'Stay Updated'} <ArrowRight size={14} />
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            required
+            className="flex-1 bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
+          />
+          <button
+            type="submit"
+            disabled={status === 'loading'}
+            className="btn-primary text-xs py-2.5 px-5 disabled:opacity-50 whitespace-nowrap"
+          >
+            {status === 'loading' ? 'Saving...' : 'Stay Updated'} <ArrowRight size={14} />
+          </button>
+        </div>
       </div>
 
       {!showPhone && (
         <button
           type="button"
           onClick={() => setShowPhone(true)}
-          className="mt-2 text-xs text-arden-border hover:text-arden-subtext transition-colors"
+          className="text-xs text-arden-border hover:text-arden-subtext transition-colors"
         >
           + Add phone for SMS updates (optional)
         </button>
@@ -81,7 +93,7 @@ export default function SubscribeForm() {
           value={phone}
           onChange={e => setPhone(e.target.value)}
           placeholder="+1 (555) 000-0000 — SMS updates (optional)"
-          className="mt-2 w-full bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
+          className="mt-1 w-full bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
         />
       )}
 
