@@ -12,6 +12,7 @@ function AccessPageContent() {
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState({ email: '', role: 'band_member' })
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
 
   const fetchMembers = async () => {
@@ -42,6 +43,9 @@ function AccessPageContent() {
       if (!res.ok) { setError(data.error); return }
       setAdding(false)
       setForm({ email: '', role: 'band_member' })
+      if (data.pending) {
+        setInfo(`Invitation saved for ${form.email}. They'll get access when they first sign in.`)
+      }
       fetchMembers()
     } catch {
       setError('Failed to add member')
@@ -83,8 +87,14 @@ function AccessPageContent() {
       </div>
 
       <div className="mb-4 p-4 bg-arden-surface border border-arden-border text-xs text-arden-subtext leading-relaxed">
-        <strong className="text-arden-accent">Security note:</strong> Members must sign in to Firebase Auth first. Once their account exists, add them here. Access is verified server-side on every dashboard load.
+        <strong className="text-arden-accent">Security note:</strong> Enter any email — if they haven&apos;t signed in yet, an invitation is saved and access is granted automatically on their first login.
       </div>
+
+      {info && (
+        <div className="mb-4 p-4 bg-arden-surface border border-green-800 text-xs text-green-400 leading-relaxed">
+          {info}
+        </div>
+      )}
 
       {adding && (
         <div className="bg-arden-surface border border-arden-border p-5 mb-6">

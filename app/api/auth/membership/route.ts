@@ -16,6 +16,28 @@ export async function GET(req: NextRequest) {
     const membershipDoc = await adminDb.collection('memberships').doc(decoded.uid).get()
 
     if (!membershipDoc.exists) {
+      // Check if there's a pending invitation for this email
+      const email = decoded.email
+      if (email) {
+        const pending = await adminDb.collection('pendingInvitations').doc(email).get()
+        if (pending.exists) {
+          const inv = pending.data()!
+          // Promote to full membership
+          const newMembership = {
+            email,
+            role: inv.role,
+            active: true,
+            invitedAt: inv.invitedAt,
+            approvedAt: new Date().toISOString(),
+            displayName: decoded.name || email.split('@')[0],
+          }
+          await Promise.all([
+            adminDb.collection('memberships').doc(decoded.uid).set(newMembership),
+            adminDb.collection('pendingInvitations').doc(email).delete(),
+          ])
+          return NextResponse.json({ membership: { ...newMembership, uid: decoded.uid } })
+        }
+      }
       return NextResponse.json({ error: 'Not approved' }, { status: 403 })
     }
 

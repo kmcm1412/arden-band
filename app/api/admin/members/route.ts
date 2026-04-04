@@ -36,12 +36,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
     }
 
-    // Look up user
+    // Look up user — if they haven't signed in yet, store a pending invitation
+    // so access is granted automatically on their first login
     let userRecord
     try {
       userRecord = await adminAuth.getUserByEmail(email)
     } catch {
-      return NextResponse.json({ error: 'User must have a Firebase Auth account first (sign in once)' }, { status: 404 })
+      // User hasn't created a Firebase account yet — save pending invitation by email
+      await adminDb.collection('pendingInvitations').doc(email).set({
+        email,
+        role,
+        invitedAt: new Date().toISOString(),
+      })
+      return NextResponse.json({ ok: true, pending: true, message: 'Invitation saved. Access will be granted when they first sign in.' })
     }
 
     await adminDb.collection('memberships').doc(userRecord.uid).set({

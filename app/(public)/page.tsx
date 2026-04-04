@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { ArrowRight, Camera, Play, MapPin } from 'lucide-react'
+import { ArrowRight, Camera, Play } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
+import SubscribeForm from '@/components/SubscribeForm'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,19 @@ async function getSiteContent() {
     return doc.exists ? (doc.data() as Record<string, string>) : {}
   } catch {
     return {}
+  }
+}
+
+async function getFeaturedVideoId(): Promise<string | null> {
+  try {
+    const snap = await adminDb.collection('media').where('featured', '==', true).limit(1).get()
+    if (!snap.empty) return snap.docs[0].data().youtubeId as string
+    // Fall back to most recent video
+    const latest = await adminDb.collection('media').orderBy('createdAt', 'desc').limit(1).get()
+    if (!latest.empty) return latest.docs[0].data().youtubeId as string
+    return null
+  } catch {
+    return null
   }
 }
 
@@ -31,7 +45,7 @@ async function getUpcomingShows(limit = 3) {
 }
 
 export default async function HomePage() {
-  const [content, upcomingShows] = await Promise.all([getSiteContent(), getUpcomingShows()])
+  const [content, upcomingShows, featuredVideoId] = await Promise.all([getSiteContent(), getUpcomingShows(), getFeaturedVideoId()])
 
   const estYear = content.estYear || '2022'
   const heroTagline = content.heroTagline || 'Indie rock from the ground up. Raw energy, honest songs, and a sound that keeps moving.'
@@ -137,17 +151,26 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="mb-8 group">
-            <div className="relative aspect-video bg-arden-surface overflow-hidden">
-              <iframe
-                src="https://www.youtube.com/embed/videoseries?list=UU&autoplay=0"
-                className="absolute inset-0 w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                title="Arden - Featured Video"
-              />
+          {featuredVideoId ? (
+            <div className="mb-8 group">
+              <div className="relative aspect-video bg-arden-surface overflow-hidden">
+                <iframe
+                  src={`https://www.youtube.com/embed/${featuredVideoId}`}
+                  className="absolute inset-0 w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title="Arden - Featured Video"
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mb-8 aspect-video bg-arden-surface flex items-center justify-center">
+              <a href="https://youtube.com/@ardenjams" target="_blank" rel="noopener noreferrer"
+                className="text-arden-accent hover:text-arden-white transition-colors text-sm tracking-wider uppercase">
+                Watch on YouTube →
+              </a>
+            </div>
+          )}
 
           <div className="text-center mt-8">
             <Link href="/media" className="btn-ghost">
@@ -242,6 +265,20 @@ export default async function HomePage() {
                 <p className="text-xs text-arden-subtext">{item.price}</p>
               </Link>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAN LIST */}
+      <section className="py-20 px-6 border-t border-arden-border">
+        <div className="max-w-7xl mx-auto">
+          <div className="max-w-xl">
+            <p className="section-label mb-3">Stay Connected</p>
+            <h2 className="heading-display text-4xl text-arden-white mb-4">Get Updates</h2>
+            <p className="text-arden-subtext text-sm mb-8 leading-relaxed">
+              New shows, releases, and merch drops — straight to your inbox.
+            </p>
+            <SubscribeForm />
           </div>
         </div>
       </section>

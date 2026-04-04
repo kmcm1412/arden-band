@@ -30,6 +30,7 @@ const navItems = [
 ]
 
 const adminItems = [
+  { href: '/dashboard/subscribers', label: 'Fan List', icon: Users },
   { href: '/dashboard/access', label: 'Access', icon: Users },
 ]
 
