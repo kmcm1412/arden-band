@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { db } from '@/lib/firebase/client'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { getAuth } from 'firebase/auth'
 import { Save, ExternalLink, Upload, ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
@@ -90,6 +89,29 @@ function ContentPageContent() {
     }
   }
 
+  function compressImage(file: File, maxSize: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        // Resize to max 800px on longest side
+        const max = maxSize
+        let w = img.width, h = img.height
+        if (w > max || h > max) {
+          if (w > h) { h = Math.round(h * max / w); w = max }
+          else { w = Math.round(w * max / h); h = max }
+        }
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', 0.8))
+      }
+      img.onerror = () => reject(new Error('Failed to load image'))
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -100,22 +122,11 @@ function ContentPageContent() {
     setUploading(true)
     setError('')
     try {
-      const token = await getAuth().currentUser?.getIdToken()
-      if (!token) throw new Error('Not authenticated')
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('path', 'site-content/about-photo')
-      const res = await fetch('/api/admin/upload', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Upload failed')
-      setContent(c => ({ ...c, aboutImage: data.url }))
+      const dataUrl = await compressImage(file, 800)
+      setContent(c => ({ ...c, aboutImage: dataUrl }))
     } catch (err: unknown) {
-      console.error('Failed to upload image:', err)
-      setError(err instanceof Error ? err.message : 'Failed to upload image.')
+      console.error('Failed to process image:', err)
+      setError(err instanceof Error ? err.message : 'Failed to process image.')
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -286,7 +297,7 @@ function ContentPageContent() {
                     <Upload size={12} />
                     {uploading ? 'Uploading...' : content.aboutImage ? 'Replace Photo' : 'Upload Photo'}
                   </button>
-                  <p className="text-xs text-arden-subtext">Square image recommended. Hit &quot;Save Changes&quot; after uploading.</p>
+                  <p className="text-xs text-arden-subtext">Square image recommended. Image is compressed automatically. Hit &quot;Save Changes&quot; after selecting.</p>
                 </div>
               </div>
             </div>
