@@ -20,7 +20,8 @@ async function getShows() {
       ticketLink: string | null
       status: string
     }[]
-  } catch {
+  } catch (err) {
+    console.error('[shows] Failed to fetch shows:', err)
     return []
   }
 }
