@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase/client'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { Save, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
+import DashboardGuard from '@/components/dashboard/DashboardGuard'
 
 interface SiteContent {
   estYear: string
@@ -18,7 +19,7 @@ const DEFAULTS: SiteContent = {
   bio: 'Arden is an indie rock band crafting original music with an honest, lived-in sound. Formed through late-night rehearsals and relentless gigging, the band brings a raw energy to every performance — equal parts careful craft and in-the-moment feeling.',
 }
 
-export default function ContentPage() {
+function ContentPageContent() {
   const [content, setContent] = useState<SiteContent>(DEFAULTS)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -132,5 +133,13 @@ export default function ContentPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ContentPage() {
+  return (
+    <DashboardGuard requireAdmin>
+      <ContentPageContent />
+    </DashboardGuard>
   )
 }

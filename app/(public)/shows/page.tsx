@@ -38,8 +38,8 @@ function formatShowDate(dateStr: string) {
 export default async function ShowsPage() {
   const shows = await getShows()
   const now = new Date()
-  const upcoming = shows.filter(s => new Date(s.date) > now)
-  const past = shows.filter(s => new Date(s.date) <= now)
+  const upcoming = shows.filter(s => new Date(s.datetime) > now)
+  const past = shows.filter(s => new Date(s.datetime) <= now)
 
   return (
     <div className="pt-24 pb-24 px-6">

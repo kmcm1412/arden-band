@@ -29,16 +29,16 @@ async function getFeaturedVideoId(): Promise<string | null> {
 
 async function getUpcomingShows(limit = 3) {
   try {
+    const now = new Date().toISOString()
     const snap = await adminDb
       .collection('shows')
       .where('isPublic', '==', true)
+      .where('datetime', '>', now)
       .orderBy('datetime', 'asc')
       .limit(limit)
       .get()
-    const now = new Date()
     return snap.docs
       .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as { id: string; datetime: string; venue: string; location: string })
-      .filter(s => new Date(s.datetime) > now)
   } catch {
     return []
   }
