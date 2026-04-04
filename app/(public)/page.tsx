@@ -1,4 +1,5 @@
 import Link from 'next/link'
+/* eslint-disable @next/next/no-img-element */
 import { ArrowRight, Camera, Play } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
 import SubscribeForm from '@/components/SubscribeForm'
@@ -53,15 +54,21 @@ export default async function HomePage() {
     <div className="overflow-x-hidden">
       {/* HERO */}
       <section className="relative min-h-screen flex items-end pb-24 px-6">
-        <div
-          className="absolute inset-0 z-0"
-          style={{
-            background: 'radial-gradient(ellipse at 60% 40%, rgba(200,169,110,0.08) 0%, transparent 60%), radial-gradient(ellipse at 20% 80%, rgba(200,169,110,0.04) 0%, transparent 50%), linear-gradient(180deg, #0a0a0a 0%, #0f0f0f 100%)',
-          }}
-        />
+        {/* Banner image — fills hero, fades at bottom for text */}
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute top-0 left-0 w-px h-full bg-arden-border opacity-40" style={{ left: '8%' }} />
-          <div className="absolute top-0 left-0 w-px h-full bg-arden-border opacity-20" style={{ left: '92%' }} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/hero-banner.jpeg"
+            alt="Arden performing live"
+            className="absolute top-0 left-0 w-full h-auto min-h-full object-cover object-top"
+          />
+          {/* Bottom fade — for text readability */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(to bottom, transparent 35%, rgba(10,10,10,0.5) 55%, rgba(10,10,10,0.85) 72%, #0a0a0a 88%)',
+            }}
+          />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto w-full">
