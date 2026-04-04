@@ -80,11 +80,11 @@ export default async function HomePage() {
             >
               Arden
             </h1>
-            <p className="text-arden-subtext text-lg max-w-xl leading-relaxed mb-12">
+            <p className="text-arden-subtext text-lg max-w-xl leading-relaxed mb-8">
               {heroTagline}
             </p>
 
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap items-center gap-4 mb-6">
               <Link href="/media" className="btn-primary">
                 Watch <ArrowRight size={16} />
               </Link>
@@ -92,27 +92,27 @@ export default async function HomePage() {
                 See Shows
               </Link>
             </div>
-          </div>
 
-          <div className="absolute bottom-0 right-0 flex items-center gap-6 pb-24 pr-0">
-            <a
-              href="https://www.instagram.com/ardenjams"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors"
-            >
-              <Camera size={16} />
-              <span className="text-xs tracking-widest uppercase">Instagram</span>
-            </a>
-            <a
-              href="https://youtube.com/@ardenjams"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors"
-            >
-              <Play size={16} />
-              <span className="text-xs tracking-widest uppercase">YouTube</span>
-            </a>
+            <div className="flex items-center gap-6">
+              <a
+                href="https://www.instagram.com/ardenjams"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors"
+              >
+                <Camera size={16} />
+                <span className="text-xs tracking-widest uppercase">Instagram</span>
+              </a>
+              <a
+                href="https://youtube.com/@ardenjams"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors"
+              >
+                <Play size={16} />
+                <span className="text-xs tracking-widest uppercase">YouTube</span>
+              </a>
+            </div>
           </div>
         </div>
       </section>
