@@ -1,17 +1,29 @@
+import { adminDb } from '@/lib/firebase/admin'
+
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Media — Arden' }
 
-const VIDEOS = [
-  { id: 'dQw4w9WgXcQ', title: 'Live at The Foundry', description: 'Full live set, May 2024', featured: true },
-  { id: 'dQw4w9WgXcQ', title: 'Studio Session Vol. 1', description: 'Behind the scenes in the studio', featured: false },
-  { id: 'dQw4w9WgXcQ', title: 'Acoustic Set', description: 'Stripped-back acoustic performance', featured: false },
-  { id: 'dQw4w9WgXcQ', title: 'Rehearsal Cuts', description: 'Unfiltered rehearsal footage', featured: false },
-  { id: 'dQw4w9WgXcQ', title: 'Music Video: Coming Soon', description: 'Official music video', featured: false },
-  { id: 'dQw4w9WgXcQ', title: 'Live at Rockwood', description: 'NYC performance', featured: false },
-]
+interface Video {
+  id: string
+  youtubeId: string
+  title: string
+  description: string
+  featured: boolean
+}
 
-export default function MediaPage() {
-  const featured = VIDEOS.find(v => v.featured)
-  const rest = VIDEOS.filter(v => !v.featured)
+async function getVideos(): Promise<Video[]> {
+  try {
+    const snap = await adminDb.collection('media').orderBy('createdAt', 'desc').get()
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Video, 'id'>) }))
+  } catch {
+    return []
+  }
+}
+
+export default async function MediaPage() {
+  const videos = await getVideos()
+  const featured = videos.find(v => v.featured)
+  const rest = videos.filter(v => !v.featured)
 
   return (
     <div className="pt-24 pb-24 px-6">
@@ -21,12 +33,11 @@ export default function MediaPage() {
           <h1 className="heading-display text-5xl md:text-7xl text-arden-white">Media</h1>
         </div>
 
-        {/* Featured video */}
         {featured && (
           <div className="mb-16">
             <div className="relative aspect-video bg-arden-surface overflow-hidden">
               <iframe
-                src={`https://www.youtube.com/embed/${featured.id}`}
+                src={`https://www.youtube.com/embed/${featured.youtubeId}`}
                 className="absolute inset-0 w-full h-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
@@ -41,7 +52,6 @@ export default function MediaPage() {
           </div>
         )}
 
-        {/* YouTube channel link */}
         <div className="mb-12 p-6 bg-arden-surface border border-arden-border">
           <p className="text-arden-subtext text-sm">Watch all videos on YouTube</p>
           <a
@@ -54,27 +64,42 @@ export default function MediaPage() {
           </a>
         </div>
 
-        {/* Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {rest.map((video, i) => (
-            <div key={i} className="group">
-              <div className="relative aspect-video bg-arden-surface overflow-hidden mb-3">
-                <iframe
-                  src={`https://www.youtube.com/embed/${video.id}`}
-                  className="absolute inset-0 w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  title={video.title}
-                  loading="lazy"
-                />
+        {rest.length > 0 ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {rest.map((video) => (
+              <div key={video.id} className="group">
+                <div className="relative aspect-video bg-arden-surface overflow-hidden mb-3">
+                  <iframe
+                    src={`https://www.youtube.com/embed/${video.youtubeId}`}
+                    className="absolute inset-0 w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={video.title}
+                    loading="lazy"
+                  />
+                </div>
+                <h3 className="font-medium text-arden-text group-hover:text-arden-accent transition-colors">
+                  {video.title}
+                </h3>
+                <p className="text-sm text-arden-subtext">{video.description}</p>
               </div>
-              <h3 className="font-medium text-arden-text group-hover:text-arden-accent transition-colors">
-                {video.title}
-              </h3>
-              <p className="text-sm text-arden-subtext">{video.description}</p>
+            ))}
+          </div>
+        ) : (
+          !featured && (
+            <div className="py-20 text-center">
+              <p className="text-arden-subtext text-lg">No videos yet.</p>
+              <p className="text-arden-subtext text-sm mt-2">
+                Subscribe on{' '}
+                <a href="https://youtube.com/@ardenjams" target="_blank" rel="noopener noreferrer"
+                  className="text-arden-accent hover:text-arden-white transition-colors">
+                  YouTube
+                </a>{' '}
+                for updates.
+              </p>
             </div>
-          ))}
-        </div>
+          )
+        )}
       </div>
     </div>
   )
