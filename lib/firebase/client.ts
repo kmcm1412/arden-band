@@ -1,7 +1,7 @@
-import { initializeApp, getApps } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
-import { getStorage } from 'firebase/storage'
+import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
+import { getAuth, type Auth } from 'firebase/auth'
+import { getFirestore, type Firestore } from 'firebase/firestore'
+import { getStorage, type FirebaseStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,9 +12,37 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
+function getApp(): FirebaseApp {
+  if (getApps().length === 0) {
+    return initializeApp(firebaseConfig)
+  }
+  return getApps()[0]
+}
 
-export const auth = getAuth(app)
-export const db = getFirestore(app)
-export const storage = getStorage(app)
-export default app
+// Lazy getters — Firebase is only initialized when first accessed at runtime,
+// not during static page prerendering at build time.
+export const auth: Auth = new Proxy({} as Auth, {
+  get(_target, prop) {
+    const instance = getAuth(getApp())
+    const value = (instance as unknown as Record<string | symbol, unknown>)[prop]
+    return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(instance) : value
+  },
+})
+
+export const db: Firestore = new Proxy({} as Firestore, {
+  get(_target, prop) {
+    const instance = getFirestore(getApp())
+    const value = (instance as unknown as Record<string | symbol, unknown>)[prop]
+    return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(instance) : value
+  },
+})
+
+export const storage: FirebaseStorage = new Proxy({} as FirebaseStorage, {
+  get(_target, prop) {
+    const instance = getStorage(getApp())
+    const value = (instance as unknown as Record<string | symbol, unknown>)[prop]
+    return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(instance) : value
+  },
+})
+
+export default { getApp }
