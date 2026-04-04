@@ -43,13 +43,21 @@ export interface MediaItem {
   publishedAt?: string
 }
 
+export interface AvailabilityEntry {
+  date: string
+  time?: string
+  type: 'available' | 'band_practice' | 'meeting' | 'show' | 'other'
+  who?: string
+  notes?: string
+}
+
 export interface Availability {
   id?: string
   userId: string
   userEmail: string
   userName: string
   dates: string[]
-  notes?: string
+  entries: AvailabilityEntry[]
   updatedAt: string
 }
 
