@@ -21,6 +21,7 @@ export default async function AboutPage() {
   const aboutPageBio1 = content.aboutPageBio1 || 'Formed through shared obsessions with sound and performance, Arden has spent their time building something real — not a genre exercise, but a body of work that reflects who they are.'
   const aboutPageBio2 = content.aboutPageBio2 || 'The songs are lived in. The performances are committed. The band shows up with something to say and the chops to say it.'
   const aboutPageBio3 = content.aboutPageBio3 || 'Based out of the Northeast, they play wherever the rooms are right and the people are ready.'
+  const aboutImage = content.aboutImage || ''
   const instagramUrl = content.instagramUrl || 'https://www.instagram.com/ardenjams'
   const youtubeUrl = content.youtubeUrl || 'https://youtube.com/@ardenjams'
   const instagramHandle = content.instagramHandle || '@ardenjams'
@@ -36,9 +37,16 @@ export default async function AboutPage() {
         {/* Bio */}
         <div className="grid md:grid-cols-2 gap-16 mb-24">
           <div>
-            <div className="aspect-square bg-arden-surface flex items-center justify-center">
-              <span className="font-display text-6xl text-arden-border">A</span>
-            </div>
+            {aboutImage ? (
+              <div className="aspect-square bg-arden-surface overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={aboutImage} alt="Arden" className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="aspect-square bg-arden-surface flex items-center justify-center">
+                <span className="font-display text-6xl text-arden-border">A</span>
+              </div>
+            )}
           </div>
           <div className="flex flex-col justify-center">
             <h2 className="heading-display text-3xl text-arden-white mb-6">

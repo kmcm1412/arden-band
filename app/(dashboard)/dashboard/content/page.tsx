@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { db } from '@/lib/firebase/client'
+import { useState, useEffect, useRef } from 'react'
+import { db, storage } from '@/lib/firebase/client'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { Save, ExternalLink } from 'lucide-react'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { Save, ExternalLink, Upload, ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 
@@ -19,6 +20,7 @@ interface SiteContent {
   newsletterHeading: string
   newsletterDescription: string
   // About page
+  aboutImage: string
   aboutPageHeading: string
   aboutPageBio1: string
   aboutPageBio2: string
@@ -42,6 +44,7 @@ const DEFAULTS: SiteContent = {
   aboutAccent: 'refined in the room.',
   newsletterHeading: 'Get Updates',
   newsletterDescription: 'New shows, releases, and merch drops — straight to your inbox.',
+  aboutImage: '',
   aboutPageHeading: 'Arden is an indie rock band playing original music.',
   aboutPageBio1: 'Formed through shared obsessions with sound and performance, Arden has spent their time building something real — not a genre exercise, but a body of work that reflects who they are.',
   aboutPageBio2: 'The songs are lived in. The performances are committed. The band shows up with something to say and the chops to say it.',
@@ -60,6 +63,8 @@ function ContentPageContent() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     getDoc(doc(db, 'siteContent', 'home')).then(snap => {
@@ -82,6 +87,29 @@ function ContentPageContent() {
       setError(err instanceof Error ? err.message : 'Failed to save. Check console.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file.')
+      return
+    }
+    setUploading(true)
+    setError('')
+    try {
+      const storageRef = ref(storage, `site-content/about-photo.${file.name.split('.').pop()}`)
+      await uploadBytes(storageRef, file)
+      const url = await getDownloadURL(storageRef)
+      setContent(c => ({ ...c, aboutImage: url }))
+    } catch (err: unknown) {
+      console.error('Failed to upload image:', err)
+      setError(err instanceof Error ? err.message : 'Failed to upload image.')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -217,6 +245,42 @@ function ContentPageContent() {
         <div>
           <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase mb-4">About Page</h2>
           <div className="space-y-4">
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+                Band Photo <span className="normal-case">(square image shown on about page)</span>
+              </label>
+              <div className="flex items-start gap-4">
+                {content.aboutImage ? (
+                  <div className="w-32 h-32 flex-shrink-0 bg-arden-dark border border-arden-border overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={content.aboutImage} alt="About photo" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 flex-shrink-0 bg-arden-dark border border-arden-border flex items-center justify-center">
+                    <ImageIcon size={24} className="text-arden-border" />
+                  </div>
+                )}
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="flex items-center gap-2 bg-arden-muted hover:bg-arden-border text-arden-text text-xs font-medium px-3 py-2 transition-colors disabled:opacity-50"
+                  >
+                    <Upload size={12} />
+                    {uploading ? 'Uploading...' : content.aboutImage ? 'Replace Photo' : 'Upload Photo'}
+                  </button>
+                  <p className="text-xs text-arden-subtext">Square image recommended. Hit &quot;Save Changes&quot; after uploading.</p>
+                </div>
+              </div>
+            </div>
             <div className="bg-arden-surface border border-arden-border p-5">
               <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
                 Heading <span className="normal-case">(bold line next to photo)</span>
