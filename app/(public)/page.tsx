@@ -29,15 +29,12 @@ async function getFeaturedVideoId(): Promise<string | null> {
 
 async function getUpcomingShows(limit = 3) {
   try {
-    const snap = await adminDb
-      .collection('shows')
-      .where('isPublic', '==', true)
-      .orderBy('datetime', 'asc')
-      .get()
+    const snap = await adminDb.collection('shows').get()
     const now = new Date()
     return snap.docs
-      .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as { id: string; datetime: string; venue: string; location: string })
-      .filter(s => new Date(s.datetime) > now)
+      .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as { id: string; datetime: string; venue: string; location: string; isPublic: boolean })
+      .filter(s => s.isPublic && new Date(s.datetime) > now)
+      .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
       .slice(0, limit)
   } catch (err) {
     console.error('[home] Failed to fetch upcoming shows:', err)

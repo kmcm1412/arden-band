@@ -7,19 +7,19 @@ export const metadata = { title: 'Shows — Arden' }
 
 async function getShows() {
   try {
-    const snap = await adminDb
-      .collection('shows')
-      .where('isPublic', '==', true)
-      .orderBy('datetime', 'asc')
-      .get()
-    return snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as {
-      id: string
-      datetime: string
-      venue: string
-      location: string
-      ticketLink: string | null
-      status: string
-    }[]
+    const snap = await adminDb.collection('shows').get()
+    return snap.docs
+      .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as {
+        id: string
+        datetime: string
+        venue: string
+        location: string
+        ticketLink: string | null
+        status: string
+        isPublic: boolean
+      })
+      .filter(s => s.isPublic)
+      .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
   } catch (err) {
     console.error('[shows] Failed to fetch shows:', err)
     return []
