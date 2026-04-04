@@ -18,13 +18,13 @@ async function getUpcomingShows(limit = 3) {
     const snap = await adminDb
       .collection('shows')
       .where('isPublic', '==', true)
-      .orderBy('date', 'asc')
+      .orderBy('datetime', 'asc')
       .limit(limit)
       .get()
     const now = new Date()
     return snap.docs
-      .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as { id: string; date: string; venue: string; location: string })
-      .filter(s => new Date(s.date) > now)
+      .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as { id: string; datetime: string; venue: string; location: string })
+      .filter(s => new Date(s.datetime) > now)
   } catch {
     return []
   }
@@ -176,7 +176,7 @@ export default async function HomePage() {
           {upcomingShows.length > 0 ? (
             <div className="space-y-px">
               {upcomingShows.map((show) => {
-                const d = new Date(show.date)
+                const d = new Date(show.datetime)
                 const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                 return (
                   <div

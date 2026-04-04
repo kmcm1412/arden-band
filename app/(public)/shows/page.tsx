@@ -10,11 +10,11 @@ async function getShows() {
     const snap = await adminDb
       .collection('shows')
       .where('isPublic', '==', true)
-      .orderBy('date', 'asc')
+      .orderBy('datetime', 'asc')
       .get()
     return snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as {
       id: string
-      date: string
+      datetime: string
       venue: string
       location: string
       ticketLink: string | null
@@ -52,7 +52,7 @@ export default async function ShowsPage() {
         {upcoming.length > 0 ? (
           <div className="space-y-4 mb-20">
             {upcoming.map((show) => {
-              const d = formatShowDate(show.date)
+              const d = formatShowDate(show.datetime)
               return (
                 <div
                   key={show.id}
@@ -112,7 +112,7 @@ export default async function ShowsPage() {
             <p className="text-arden-subtext text-xs tracking-wider uppercase mb-6">Past Shows</p>
             <div className="space-y-2">
               {past.map((show) => {
-                const d = formatShowDate(show.date)
+                const d = formatShowDate(show.datetime)
                 return (
                   <div key={show.id} className="flex items-center gap-6 py-3 opacity-50">
                     <span className="text-arden-subtext font-mono text-sm w-20 flex-shrink-0">

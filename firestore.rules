@@ -88,6 +88,12 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && request.auth.uid == uid;
     }
 
+    // Site content (bio, tagline, etc): admins write; members read
+    match /siteContent/{docId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
     // Deny everything else
     match /{document=**} {
       allow read, write: if false;
