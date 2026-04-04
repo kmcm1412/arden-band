@@ -1,7 +1,21 @@
 import Link from 'next/link'
 import { Camera, Play } from 'lucide-react'
+import { adminDb } from '@/lib/firebase/admin'
 
-export default function Footer() {
+async function getSiteContent() {
+  try {
+    const doc = await adminDb.collection('siteContent').doc('home').get()
+    return doc.exists ? (doc.data() as Record<string, string>) : {}
+  } catch {
+    return {}
+  }
+}
+
+export default async function Footer() {
+  const content = await getSiteContent()
+  const instagramUrl = content.instagramUrl || 'https://www.instagram.com/ardenjams'
+  const youtubeUrl = content.youtubeUrl || 'https://youtube.com/@ardenjams'
+
   return (
     <footer className="border-t border-arden-border mt-24">
       <div className="max-w-7xl mx-auto px-6 py-12">
@@ -17,7 +31,7 @@ export default function Footer() {
 
           <div className="flex items-center gap-6">
             <a
-              href="https://www.instagram.com/ardenjams"
+              href={instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-arden-subtext hover:text-arden-accent transition-colors"
@@ -25,7 +39,7 @@ export default function Footer() {
               <Camera size={18} />
             </a>
             <a
-              href="https://youtube.com/@ardenjams"
+              href={youtubeUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-arden-subtext hover:text-arden-accent transition-colors"

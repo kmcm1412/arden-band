@@ -3,6 +3,15 @@ import { adminDb } from '@/lib/firebase/admin'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Media — Arden' }
 
+async function getSiteContent() {
+  try {
+    const doc = await adminDb.collection('siteContent').doc('home').get()
+    return doc.exists ? (doc.data() as Record<string, string>) : {}
+  } catch {
+    return {}
+  }
+}
+
 interface Video {
   id: string
   youtubeId: string
@@ -21,7 +30,9 @@ async function getVideos(): Promise<Video[]> {
 }
 
 export default async function MediaPage() {
-  const videos = await getVideos()
+  const [videos, content] = await Promise.all([getVideos(), getSiteContent()])
+  const youtubeUrl = content.youtubeUrl || 'https://youtube.com/@ardenjams'
+  const instagramHandle = content.instagramHandle || '@ardenjams'
   const featured = videos.find(v => v.featured)
   const rest = videos.filter(v => !v.featured)
 
@@ -55,12 +66,12 @@ export default async function MediaPage() {
         <div className="mb-12 p-6 bg-arden-surface border border-arden-border">
           <p className="text-arden-subtext text-sm">Watch all videos on YouTube</p>
           <a
-            href="https://youtube.com/@ardenjams"
+            href={youtubeUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 mt-2 text-arden-accent hover:text-arden-white transition-colors text-sm font-medium tracking-wider uppercase"
           >
-            @ardenjams →
+            {instagramHandle} →
           </a>
         </div>
 
@@ -91,7 +102,7 @@ export default async function MediaPage() {
               <p className="text-arden-subtext text-lg">No videos yet.</p>
               <p className="text-arden-subtext text-sm mt-2">
                 Subscribe on{' '}
-                <a href="https://youtube.com/@ardenjams" target="_blank" rel="noopener noreferrer"
+                <a href={youtubeUrl} target="_blank" rel="noopener noreferrer"
                   className="text-arden-accent hover:text-arden-white transition-colors">
                   YouTube
                 </a>{' '}

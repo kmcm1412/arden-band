@@ -5,6 +5,15 @@ import { adminDb } from '@/lib/firebase/admin'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Shows — Arden' }
 
+async function getSiteContent() {
+  try {
+    const doc = await adminDb.collection('siteContent').doc('home').get()
+    return doc.exists ? (doc.data() as Record<string, string>) : {}
+  } catch {
+    return {}
+  }
+}
+
 async function getShows() {
   try {
     const snap = await adminDb.collection('shows').get()
@@ -37,10 +46,14 @@ function formatShowDate(dateStr: string) {
 }
 
 export default async function ShowsPage() {
-  const shows = await getShows()
+  const [shows, content] = await Promise.all([getShows(), getSiteContent()])
   const now = new Date()
   const upcoming = shows.filter(s => new Date(s.datetime) > now)
   const past = shows.filter(s => new Date(s.datetime) <= now)
+  const instagramUrl = content.instagramUrl || 'https://www.instagram.com/ardenjams'
+  const instagramHandle = content.instagramHandle || '@ardenjams'
+  const showsEmptyMessage = content.showsEmptyMessage || 'No upcoming shows announced.'
+  const showsEmptySubtext = content.showsEmptySubtext || 'Follow us on Instagram for updates.'
 
   return (
     <div className="pt-24 pb-24 px-6">
@@ -103,8 +116,8 @@ export default async function ShowsPage() {
           </div>
         ) : (
           <div className="py-20 text-center">
-            <p className="text-arden-subtext text-lg">No upcoming shows announced.</p>
-            <p className="text-arden-subtext text-sm mt-2">Follow us on Instagram for updates.</p>
+            <p className="text-arden-subtext text-lg">{showsEmptyMessage}</p>
+            <p className="text-arden-subtext text-sm mt-2">{showsEmptySubtext}</p>
           </div>
         )}
 
@@ -133,12 +146,12 @@ export default async function ShowsPage() {
           <p className="text-arden-text">
             Follow{' '}
             <a
-              href="https://www.instagram.com/ardenjams"
+              href={instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-arden-accent hover:text-arden-white transition-colors"
             >
-              @ardenjams
+              {instagramHandle}
             </a>{' '}
             on Instagram for show announcements.
           </p>

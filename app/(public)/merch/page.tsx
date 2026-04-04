@@ -1,6 +1,17 @@
 import { ShoppingBag } from 'lucide-react'
+import { adminDb } from '@/lib/firebase/admin'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Merch — Arden' }
+
+async function getSiteContent() {
+  try {
+    const doc = await adminDb.collection('siteContent').doc('home').get()
+    return doc.exists ? (doc.data() as Record<string, string>) : {}
+  } catch {
+    return {}
+  }
+}
 
 const MERCH = [
   {
@@ -59,7 +70,10 @@ const MERCH = [
   },
 ]
 
-export default function MerchPage() {
+export default async function MerchPage() {
+  const content = await getSiteContent()
+  const merchNote = content.merchNote || 'Merch available at shows and through direct order — reach out via the contact form.'
+
   return (
     <div className="pt-24 pb-24 px-6">
       <div className="max-w-7xl mx-auto">
@@ -69,9 +83,9 @@ export default function MerchPage() {
         </div>
 
         <div className="mb-8 p-4 bg-arden-surface border border-arden-border text-sm text-arden-subtext">
-          Merch available at shows and through direct order — reach out via{' '}
+          {merchNote}{' '}
           <a href="/about" className="text-arden-accent hover:text-arden-white transition-colors">
-            the contact form
+            Contact us
           </a>
           .
         </div>

@@ -49,6 +49,12 @@ export default async function HomePage() {
   const estYear = content.estYear || '2022'
   const heroTagline = content.heroTagline || 'Indie rock from the ground up. Raw energy, honest songs, and a sound that keeps moving.'
   const bio = content.bio || 'Arden is an indie rock band crafting original music with an honest, lived-in sound. Formed through late-night rehearsals and relentless gigging, the band brings a raw energy to every performance — equal parts careful craft and in-the-moment feeling.'
+  const aboutHeading = content.aboutHeading || 'Built on stage,'
+  const aboutAccent = content.aboutAccent || 'refined in the room.'
+  const newsletterHeading = content.newsletterHeading || 'Get Updates'
+  const newsletterDescription = content.newsletterDescription || 'New shows, releases, and merch drops — straight to your inbox.'
+  const instagramUrl = content.instagramUrl || 'https://www.instagram.com/ardenjams'
+  const youtubeUrl = content.youtubeUrl || 'https://youtube.com/@ardenjams'
 
   return (
     <div className="overflow-x-hidden">
@@ -95,7 +101,7 @@ export default async function HomePage() {
 
             <div className="flex items-center gap-6">
               <a
-                href="https://www.instagram.com/ardenjams"
+                href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors"
@@ -104,7 +110,7 @@ export default async function HomePage() {
                 <span className="text-xs tracking-widest uppercase">Instagram</span>
               </a>
               <a
-                href="https://youtube.com/@ardenjams"
+                href={youtubeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors"
@@ -123,9 +129,9 @@ export default async function HomePage() {
           <div>
             <p className="section-label mb-4">The Band</p>
             <h2 className="heading-display text-4xl md:text-5xl text-arden-white mb-6">
-              Built on stage,
+              {aboutHeading}
               <br />
-              <span className="text-arden-accent">refined in the room.</span>
+              <span className="text-arden-accent">{aboutAccent}</span>
             </h2>
           </div>
           <div>
@@ -170,7 +176,7 @@ export default async function HomePage() {
             </div>
           ) : (
             <div className="mb-8 aspect-video bg-arden-surface flex items-center justify-center">
-              <a href="https://youtube.com/@ardenjams" target="_blank" rel="noopener noreferrer"
+              <a href={youtubeUrl} target="_blank" rel="noopener noreferrer"
                 className="text-arden-accent hover:text-arden-white transition-colors text-sm tracking-wider uppercase">
                 Watch on YouTube →
               </a>
@@ -279,9 +285,9 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="max-w-xl">
             <p className="section-label mb-3">Stay Connected</p>
-            <h2 className="heading-display text-4xl text-arden-white mb-4">Get Updates</h2>
+            <h2 className="heading-display text-4xl text-arden-white mb-4">{newsletterHeading}</h2>
             <p className="text-arden-subtext text-sm mb-8 leading-relaxed">
-              New shows, releases, and merch drops — straight to your inbox.
+              {newsletterDescription}
             </p>
             <SubscribeForm />
           </div>

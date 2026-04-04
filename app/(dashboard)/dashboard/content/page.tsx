@@ -8,15 +8,50 @@ import Link from 'next/link'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 
 interface SiteContent {
+  // Homepage — Hero
   estYear: string
   heroTagline: string
+  // Homepage — About strip
   bio: string
+  aboutHeading: string
+  aboutAccent: string
+  // Homepage — Newsletter
+  newsletterHeading: string
+  newsletterDescription: string
+  // About page
+  aboutPageHeading: string
+  aboutPageBio1: string
+  aboutPageBio2: string
+  aboutPageBio3: string
+  // Merch page
+  merchNote: string
+  // Shows page — empty states
+  showsEmptyMessage: string
+  showsEmptySubtext: string
+  // Social links (used site-wide)
+  instagramUrl: string
+  youtubeUrl: string
+  instagramHandle: string
 }
 
 const DEFAULTS: SiteContent = {
   estYear: '2022',
   heroTagline: 'Indie rock from the ground up. Raw energy, honest songs, and a sound that keeps moving.',
   bio: 'Arden is an indie rock band crafting original music with an honest, lived-in sound. Formed through late-night rehearsals and relentless gigging, the band brings a raw energy to every performance — equal parts careful craft and in-the-moment feeling.',
+  aboutHeading: 'Built on stage,',
+  aboutAccent: 'refined in the room.',
+  newsletterHeading: 'Get Updates',
+  newsletterDescription: 'New shows, releases, and merch drops — straight to your inbox.',
+  aboutPageHeading: 'Arden is an indie rock band playing original music.',
+  aboutPageBio1: 'Formed through shared obsessions with sound and performance, Arden has spent their time building something real — not a genre exercise, but a body of work that reflects who they are.',
+  aboutPageBio2: 'The songs are lived in. The performances are committed. The band shows up with something to say and the chops to say it.',
+  aboutPageBio3: 'Based out of the Northeast, they play wherever the rooms are right and the people are ready.',
+  merchNote: 'Merch available at shows and through direct order — reach out via the contact form.',
+  showsEmptyMessage: 'No upcoming shows announced.',
+  showsEmptySubtext: 'Follow us on Instagram for updates.',
+  instagramUrl: 'https://www.instagram.com/ardenjams',
+  youtubeUrl: 'https://youtube.com/@ardenjams',
+  instagramHandle: '@ardenjams',
 }
 
 function ContentPageContent() {
@@ -76,46 +111,242 @@ function ContentPageContent() {
         </div>
       )}
 
-      <div className="space-y-6">
-        <div className="bg-arden-surface border border-arden-border p-5">
-          <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
-            Est. Year <span className="normal-case">(shown in hero section)</span>
-          </label>
-          <input
-            type="text"
-            value={content.estYear}
-            onChange={e => setContent(c => ({ ...c, estYear: e.target.value }))}
-            className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
-            placeholder="2022"
-          />
+      <div className="space-y-8">
+        {/* ─── HOMEPAGE: HERO ─── */}
+        <div>
+          <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase mb-4">Homepage — Hero</h2>
+          <div className="space-y-4">
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+                Est. Year
+              </label>
+              <input
+                type="text"
+                value={content.estYear}
+                onChange={e => setContent(c => ({ ...c, estYear: e.target.value }))}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                placeholder="2022"
+              />
+            </div>
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+                Hero Tagline <span className="normal-case">(short line under &quot;Arden&quot;)</span>
+              </label>
+              <textarea
+                value={content.heroTagline}
+                onChange={e => setContent(c => ({ ...c, heroTagline: e.target.value }))}
+                rows={3}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent resize-none"
+                placeholder="Indie rock from the ground up..."
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="bg-arden-surface border border-arden-border p-5">
-          <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
-            Hero Tagline <span className="normal-case">(short line under "Arden" on homepage)</span>
-          </label>
-          <textarea
-            value={content.heroTagline}
-            onChange={e => setContent(c => ({ ...c, heroTagline: e.target.value }))}
-            rows={3}
-            className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent resize-none"
-            placeholder="Indie rock from the ground up..."
-          />
+        {/* ─── HOMEPAGE: ABOUT STRIP ─── */}
+        <div>
+          <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase mb-4">Homepage — About Section</h2>
+          <div className="space-y-4">
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+                Section Heading <span className="normal-case">(first line)</span>
+              </label>
+              <input
+                type="text"
+                value={content.aboutHeading}
+                onChange={e => setContent(c => ({ ...c, aboutHeading: e.target.value }))}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                placeholder="Built on stage,"
+              />
+            </div>
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+                Accent Line <span className="normal-case">(highlighted second line)</span>
+              </label>
+              <input
+                type="text"
+                value={content.aboutAccent}
+                onChange={e => setContent(c => ({ ...c, aboutAccent: e.target.value }))}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                placeholder="refined in the room."
+              />
+            </div>
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+                Band Bio <span className="normal-case">(paragraph next to heading)</span>
+              </label>
+              <textarea
+                value={content.bio}
+                onChange={e => setContent(c => ({ ...c, bio: e.target.value }))}
+                rows={5}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent resize-none"
+                placeholder="Arden is an indie rock band..."
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="bg-arden-surface border border-arden-border p-5">
-          <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
-            Band Bio <span className="normal-case">(shown in "The Band" section on homepage)</span>
-          </label>
-          <textarea
-            value={content.bio}
-            onChange={e => setContent(c => ({ ...c, bio: e.target.value }))}
-            rows={5}
-            className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent resize-none"
-            placeholder="Arden is an indie rock band..."
-          />
+        {/* ─── HOMEPAGE: NEWSLETTER ─── */}
+        <div>
+          <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase mb-4">Homepage — Newsletter</h2>
+          <div className="space-y-4">
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">Heading</label>
+              <input
+                type="text"
+                value={content.newsletterHeading}
+                onChange={e => setContent(c => ({ ...c, newsletterHeading: e.target.value }))}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                placeholder="Get Updates"
+              />
+            </div>
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">Description</label>
+              <textarea
+                value={content.newsletterDescription}
+                onChange={e => setContent(c => ({ ...c, newsletterDescription: e.target.value }))}
+                rows={2}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent resize-none"
+                placeholder="New shows, releases, and merch drops..."
+              />
+            </div>
+          </div>
         </div>
 
+        {/* ─── ABOUT PAGE ─── */}
+        <div>
+          <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase mb-4">About Page</h2>
+          <div className="space-y-4">
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+                Heading <span className="normal-case">(bold line next to photo)</span>
+              </label>
+              <textarea
+                value={content.aboutPageHeading}
+                onChange={e => setContent(c => ({ ...c, aboutPageHeading: e.target.value }))}
+                rows={2}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent resize-none"
+                placeholder="Arden is an indie rock band playing original music."
+              />
+            </div>
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">Bio — Paragraph 1</label>
+              <textarea
+                value={content.aboutPageBio1}
+                onChange={e => setContent(c => ({ ...c, aboutPageBio1: e.target.value }))}
+                rows={3}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent resize-none"
+              />
+            </div>
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">Bio — Paragraph 2</label>
+              <textarea
+                value={content.aboutPageBio2}
+                onChange={e => setContent(c => ({ ...c, aboutPageBio2: e.target.value }))}
+                rows={3}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent resize-none"
+              />
+            </div>
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">Bio — Paragraph 3</label>
+              <textarea
+                value={content.aboutPageBio3}
+                onChange={e => setContent(c => ({ ...c, aboutPageBio3: e.target.value }))}
+                rows={3}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ─── MERCH PAGE ─── */}
+        <div>
+          <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase mb-4">Merch Page</h2>
+          <div className="bg-arden-surface border border-arden-border p-5">
+            <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+              Availability Note <span className="normal-case">(banner at top of merch page)</span>
+            </label>
+            <textarea
+              value={content.merchNote}
+              onChange={e => setContent(c => ({ ...c, merchNote: e.target.value }))}
+              rows={2}
+              className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent resize-none"
+              placeholder="Merch available at shows..."
+            />
+          </div>
+        </div>
+
+        {/* ─── SHOWS PAGE ─── */}
+        <div>
+          <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase mb-4">Shows Page</h2>
+          <div className="space-y-4">
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+                Empty State Message <span className="normal-case">(when no upcoming shows)</span>
+              </label>
+              <input
+                type="text"
+                value={content.showsEmptyMessage}
+                onChange={e => setContent(c => ({ ...c, showsEmptyMessage: e.target.value }))}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                placeholder="No upcoming shows announced."
+              />
+            </div>
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+                Empty State Subtext
+              </label>
+              <input
+                type="text"
+                value={content.showsEmptySubtext}
+                onChange={e => setContent(c => ({ ...c, showsEmptySubtext: e.target.value }))}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                placeholder="Follow us on Instagram for updates."
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ─── SOCIAL LINKS ─── */}
+        <div>
+          <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase mb-4">Social Links (site-wide)</h2>
+          <div className="space-y-4">
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">Instagram URL</label>
+              <input
+                type="url"
+                value={content.instagramUrl}
+                onChange={e => setContent(c => ({ ...c, instagramUrl: e.target.value }))}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                placeholder="https://www.instagram.com/ardenjams"
+              />
+            </div>
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">YouTube URL</label>
+              <input
+                type="url"
+                value={content.youtubeUrl}
+                onChange={e => setContent(c => ({ ...c, youtubeUrl: e.target.value }))}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                placeholder="https://youtube.com/@ardenjams"
+              />
+            </div>
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+                Instagram Handle <span className="normal-case">(displayed on about page &amp; footer)</span>
+              </label>
+              <input
+                type="text"
+                value={content.instagramHandle}
+                onChange={e => setContent(c => ({ ...c, instagramHandle: e.target.value }))}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                placeholder="@ardenjams"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ─── OTHER CONTENT LINKS ─── */}
         <div className="border-t border-arden-border pt-6">
           <p className="text-xs text-arden-subtext mb-4 tracking-wider uppercase">Other Content</p>
           <div className="grid md:grid-cols-2 gap-3">
