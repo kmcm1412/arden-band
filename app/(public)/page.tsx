@@ -68,7 +68,7 @@ export default async function HomePage() {
 
         <div className="relative z-10 max-w-7xl mx-auto w-full">
           <div className="max-w-3xl">
-            <p className="section-label mb-6">Est. {estYear} — Original Music</p>
+            <p className="section-label mb-6">Est. {estYear}</p>
             <h1
               className="heading-display text-[clamp(4rem,12vw,9rem)] text-arden-white mb-8 leading-none"
               style={{ letterSpacing: '-0.02em' }}

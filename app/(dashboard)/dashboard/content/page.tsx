@@ -23,20 +23,28 @@ function ContentPageContent() {
   const [content, setContent] = useState<SiteContent>(DEFAULTS)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     getDoc(doc(db, 'siteContent', 'home')).then(snap => {
       if (snap.exists()) setContent({ ...DEFAULTS, ...(snap.data() as SiteContent) })
+    }).catch(err => {
+      console.error('Failed to load site content:', err)
+      setError('Failed to load content. Check console for details.')
     }).finally(() => setLoading(false))
   }, [])
 
   async function handleSave() {
     setSaving(true)
+    setError('')
     try {
       await setDoc(doc(db, 'siteContent', 'home'), content)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
+    } catch (err: unknown) {
+      console.error('Failed to save site content:', err)
+      setError(err instanceof Error ? err.message : 'Failed to save. Check console.')
     } finally {
       setSaving(false)
     }
@@ -62,10 +70,16 @@ function ContentPageContent() {
         </button>
       </div>
 
+      {error && (
+        <div className="mb-6 p-4 bg-red-900/20 border border-red-900 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
+
       <div className="space-y-6">
         <div className="bg-arden-surface border border-arden-border p-5">
           <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
-            Est. Year <span className="normal-case">(shown in hero: "Est. 2022 — Original Music")</span>
+            Est. Year <span className="normal-case">(shown in hero section)</span>
           </label>
           <input
             type="text"
