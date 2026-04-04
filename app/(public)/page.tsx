@@ -1,24 +1,52 @@
 import Link from 'next/link'
-import { ArrowRight, Camera, Play } from 'lucide-react'
+import { ArrowRight, Camera, Play, MapPin } from 'lucide-react'
+import { adminDb } from '@/lib/firebase/admin'
 
-const YOUTUBE_FEATURED = [
-  { id: 'dQw4w9WgXcQ', title: 'Live at The Venue', desc: 'Full live performance' },
-  { id: 'dQw4w9WgXcQ', title: 'Studio Session', desc: 'Behind the scenes' },
-]
+export const dynamic = 'force-dynamic'
 
-export default function HomePage() {
+async function getSiteContent() {
+  try {
+    const doc = await adminDb.collection('siteContent').doc('home').get()
+    return doc.exists ? (doc.data() as Record<string, string>) : {}
+  } catch {
+    return {}
+  }
+}
+
+async function getUpcomingShows(limit = 3) {
+  try {
+    const snap = await adminDb
+      .collection('shows')
+      .where('isPublic', '==', true)
+      .orderBy('date', 'asc')
+      .limit(limit)
+      .get()
+    const now = new Date()
+    return snap.docs
+      .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as { id: string; date: string; venue: string; location: string })
+      .filter(s => new Date(s.date) > now)
+  } catch {
+    return []
+  }
+}
+
+export default async function HomePage() {
+  const [content, upcomingShows] = await Promise.all([getSiteContent(), getUpcomingShows()])
+
+  const estYear = content.estYear || '2022'
+  const heroTagline = content.heroTagline || 'Indie rock from the ground up. Raw energy, honest songs, and a sound that keeps moving.'
+  const bio = content.bio || 'Arden is an indie rock band crafting original music with an honest, lived-in sound. Formed through late-night rehearsals and relentless gigging, the band brings a raw energy to every performance — equal parts careful craft and in-the-moment feeling.'
+
   return (
     <div className="overflow-x-hidden">
       {/* HERO */}
       <section className="relative min-h-screen flex items-end pb-24 px-6">
-        {/* Background gradient */}
         <div
           className="absolute inset-0 z-0"
           style={{
             background: 'radial-gradient(ellipse at 60% 40%, rgba(200,169,110,0.08) 0%, transparent 60%), radial-gradient(ellipse at 20% 80%, rgba(200,169,110,0.04) 0%, transparent 50%), linear-gradient(180deg, #0a0a0a 0%, #0f0f0f 100%)',
           }}
         />
-        {/* Decorative lines */}
         <div className="absolute inset-0 z-0 overflow-hidden">
           <div className="absolute top-0 left-0 w-px h-full bg-arden-border opacity-40" style={{ left: '8%' }} />
           <div className="absolute top-0 left-0 w-px h-full bg-arden-border opacity-20" style={{ left: '92%' }} />
@@ -26,7 +54,7 @@ export default function HomePage() {
 
         <div className="relative z-10 max-w-7xl mx-auto w-full">
           <div className="max-w-3xl">
-            <p className="section-label mb-6">Est. 2022 — Original Music</p>
+            <p className="section-label mb-6">Est. {estYear} — Original Music</p>
             <h1
               className="heading-display text-[clamp(4rem,12vw,9rem)] text-arden-white mb-8 leading-none"
               style={{ letterSpacing: '-0.02em' }}
@@ -34,8 +62,7 @@ export default function HomePage() {
               Arden
             </h1>
             <p className="text-arden-subtext text-lg max-w-xl leading-relaxed mb-12">
-              Indie rock from the ground up. Raw energy, honest songs, and a sound
-              that keeps moving.
+              {heroTagline}
             </p>
 
             <div className="flex flex-wrap gap-4">
@@ -48,7 +75,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Social strip */}
           <div className="absolute bottom-0 right-0 flex items-center gap-6 pb-24 pr-0">
             <a
               href="https://www.instagram.com/ardenjams"
@@ -84,12 +110,7 @@ export default function HomePage() {
             </h2>
           </div>
           <div>
-            <p className="text-arden-subtext leading-relaxed text-lg">
-              Arden is an indie rock band crafting original music with an honest,
-              lived-in sound. Formed through late-night rehearsals and relentless
-              gigging, the band brings a raw energy to every performance — equal
-              parts careful craft and in-the-moment feeling.
-            </p>
+            <p className="text-arden-subtext leading-relaxed text-lg">{bio}</p>
             <Link
               href="/about"
               className="inline-flex items-center gap-2 mt-6 text-sm text-arden-accent hover:text-arden-white transition-colors uppercase tracking-wider"
@@ -116,7 +137,6 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Featured large video */}
           <div className="mb-8 group">
             <div className="relative aspect-video bg-arden-surface overflow-hidden">
               <iframe
@@ -153,29 +173,33 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="space-y-px">
-            {[
-              { date: 'May 10', venue: 'The Foundry', location: 'Philadelphia, PA' },
-              { date: 'May 17', venue: 'Rockwood Music Hall', location: 'New York, NY' },
-              { date: 'May 24', venue: 'The Sinclair', location: 'Cambridge, MA' },
-            ].map((show, i) => (
-              <div
-                key={i}
-                className="group flex items-center justify-between py-5 px-6 bg-arden-surface hover:bg-arden-muted transition-colors cursor-pointer border-l-2 border-transparent hover:border-arden-accent"
-              >
-                <div className="flex items-center gap-8">
-                  <span className="text-arden-accent font-mono text-sm w-16">{show.date}</span>
-                  <div>
-                    <p className="text-arden-white font-medium">{show.venue}</p>
-                    <p className="text-arden-subtext text-sm">{show.location}</p>
+          {upcomingShows.length > 0 ? (
+            <div className="space-y-px">
+              {upcomingShows.map((show) => {
+                const d = new Date(show.date)
+                const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                return (
+                  <div
+                    key={show.id}
+                    className="group flex items-center justify-between py-5 px-6 bg-arden-surface hover:bg-arden-muted transition-colors cursor-pointer border-l-2 border-transparent hover:border-arden-accent"
+                  >
+                    <div className="flex items-center gap-8">
+                      <span className="text-arden-accent font-mono text-sm w-16">{label}</span>
+                      <div>
+                        <p className="text-arden-white font-medium">{show.venue}</p>
+                        <p className="text-arden-subtext text-sm">{show.location}</p>
+                      </div>
+                    </div>
+                    <Link href="/shows" className="btn-ghost text-xs py-2 px-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      Info
+                    </Link>
                   </div>
-                </div>
-                <Link href="/shows" className="btn-ghost text-xs py-2 px-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                  Tickets
-                </Link>
-              </div>
-            ))}
-          </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-arden-subtext">No upcoming shows. Check back soon.</p>
+          )}
 
           <div className="mt-6 md:hidden text-center">
             <Link href="/shows" className="btn-ghost">

@@ -60,12 +60,6 @@ export default function Nav() {
           ))}
         </ul>
 
-        <div className="hidden md:block">
-          <Link href="/dashboard" className="btn-ghost text-xs py-2 px-4">
-            Band Portal
-          </Link>
-        </div>
-
         <button
           className="md:hidden text-arden-text p-2"
           onClick={() => setMobileOpen(!mobileOpen)}
@@ -91,11 +85,6 @@ export default function Nav() {
                 </Link>
               </li>
             ))}
-            <li>
-              <Link href="/dashboard" className="text-sm font-medium tracking-wider uppercase text-arden-subtext">
-                Band Portal
-              </Link>
-            </li>
           </ul>
         </div>
       )}

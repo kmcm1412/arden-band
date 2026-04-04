@@ -1,50 +1,29 @@
 import Link from 'next/link'
 import { MapPin, ExternalLink } from 'lucide-react'
+import { adminDb } from '@/lib/firebase/admin'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Shows — Arden' }
 
-const SHOWS = [
-  {
-    id: '1',
-    date: '2025-05-10T20:00:00',
-    venue: 'The Foundry',
-    location: 'Philadelphia, PA',
-    ticketLink: 'https://ticketmaster.com',
-    status: 'confirmed',
-  },
-  {
-    id: '2',
-    date: '2025-05-17T21:00:00',
-    venue: 'Rockwood Music Hall',
-    location: 'New York, NY',
-    ticketLink: 'https://ticketmaster.com',
-    status: 'confirmed',
-  },
-  {
-    id: '3',
-    date: '2025-05-24T20:30:00',
-    venue: 'The Sinclair',
-    location: 'Cambridge, MA',
-    ticketLink: 'https://ticketmaster.com',
-    status: 'confirmed',
-  },
-  {
-    id: '4',
-    date: '2025-06-07T20:00:00',
-    venue: 'Johnny Brenda\'s',
-    location: 'Philadelphia, PA',
-    ticketLink: null,
-    status: 'pending',
-  },
-  {
-    id: '5',
-    date: '2025-06-21T21:00:00',
-    venue: 'Baby\'s All Right',
-    location: 'Brooklyn, NY',
-    ticketLink: null,
-    status: 'pending',
-  },
-]
+async function getShows() {
+  try {
+    const snap = await adminDb
+      .collection('shows')
+      .where('isPublic', '==', true)
+      .orderBy('date', 'asc')
+      .get()
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as {
+      id: string
+      date: string
+      venue: string
+      location: string
+      ticketLink: string | null
+      status: string
+    }[]
+  } catch {
+    return []
+  }
+}
 
 function formatShowDate(dateStr: string) {
   const d = new Date(dateStr)
@@ -56,9 +35,11 @@ function formatShowDate(dateStr: string) {
   }
 }
 
-export default function ShowsPage() {
-  const upcoming = SHOWS.filter(s => new Date(s.date) > new Date())
-  const past = SHOWS.filter(s => new Date(s.date) <= new Date())
+export default async function ShowsPage() {
+  const shows = await getShows()
+  const now = new Date()
+  const upcoming = shows.filter(s => new Date(s.date) > now)
+  const past = shows.filter(s => new Date(s.date) <= now)
 
   return (
     <div className="pt-24 pb-24 px-6">
@@ -77,7 +58,6 @@ export default function ShowsPage() {
                   key={show.id}
                   className="group relative flex items-stretch gap-0 bg-arden-surface hover:bg-arden-muted transition-all duration-200 overflow-hidden"
                 >
-                  {/* Date block */}
                   <div className="flex-shrink-0 w-20 flex flex-col items-center justify-center bg-arden-muted group-hover:bg-arden-accent transition-colors py-6">
                     <span className="text-xs font-mono tracking-widest text-arden-subtext group-hover:text-arden-black transition-colors">
                       {d.month}
@@ -87,7 +67,6 @@ export default function ShowsPage() {
                     </span>
                   </div>
 
-                  {/* Info */}
                   <div className="flex-1 px-6 py-5 flex items-center justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-3 mb-1">
@@ -125,6 +104,26 @@ export default function ShowsPage() {
           <div className="py-20 text-center">
             <p className="text-arden-subtext text-lg">No upcoming shows announced.</p>
             <p className="text-arden-subtext text-sm mt-2">Follow us on Instagram for updates.</p>
+          </div>
+        )}
+
+        {past.length > 0 && (
+          <div className="border-t border-arden-border pt-12 mb-12">
+            <p className="text-arden-subtext text-xs tracking-wider uppercase mb-6">Past Shows</p>
+            <div className="space-y-2">
+              {past.map((show) => {
+                const d = formatShowDate(show.date)
+                return (
+                  <div key={show.id} className="flex items-center gap-6 py-3 opacity-50">
+                    <span className="text-arden-subtext font-mono text-sm w-20 flex-shrink-0">
+                      {d.month} {d.day}
+                    </span>
+                    <span className="text-arden-text">{show.venue}</span>
+                    <span className="text-arden-subtext text-sm">{show.location}</span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
