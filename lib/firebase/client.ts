@@ -29,14 +29,33 @@ export const auth: Auth = new Proxy({} as Auth, {
   },
 })
 
+let _dbInstance: Firestore | null = null
+function getRealDb(): Firestore {
+  if (!_dbInstance) _dbInstance = getFirestore(getApp())
+  return _dbInstance
+}
+
 export const db: Firestore = new Proxy({} as Firestore, {
   get(_target, prop) {
-    const instance = getFirestore(getApp())
+    const instance = getRealDb()
     const value = (instance as unknown as Record<string | symbol, unknown>)[prop]
     return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(instance) : value
   },
+  set(_target, prop, value) {
+    ;(getRealDb() as unknown as Record<string | symbol, unknown>)[prop] = value
+    return true
+  },
   getPrototypeOf(_target) {
-    return Object.getPrototypeOf(getFirestore(getApp()))
+    return Object.getPrototypeOf(getRealDb())
+  },
+  has(_target, prop) {
+    return prop in getRealDb()
+  },
+  ownKeys(_target) {
+    return Reflect.ownKeys(getRealDb())
+  },
+  getOwnPropertyDescriptor(_target, prop) {
+    return Object.getOwnPropertyDescriptor(getRealDb(), prop)
   },
 })
 
