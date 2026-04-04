@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { db, storage } from '@/lib/firebase/client'
+import { db } from '@/lib/firebase/client'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { getAuth } from 'firebase/auth'
 import { Save, ExternalLink, Upload, ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
@@ -100,10 +100,19 @@ function ContentPageContent() {
     setUploading(true)
     setError('')
     try {
-      const storageRef = ref(storage, `site-content/about-photo.${file.name.split('.').pop()}`)
-      await uploadBytes(storageRef, file)
-      const url = await getDownloadURL(storageRef)
-      setContent(c => ({ ...c, aboutImage: url }))
+      const token = await getAuth().currentUser?.getIdToken()
+      if (!token) throw new Error('Not authenticated')
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('path', 'site-content/about-photo')
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Upload failed')
+      setContent(c => ({ ...c, aboutImage: data.url }))
     } catch (err: unknown) {
       console.error('Failed to upload image:', err)
       setError(err instanceof Error ? err.message : 'Failed to upload image.')
