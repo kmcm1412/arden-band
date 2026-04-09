@@ -41,7 +41,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const refreshMembership = async () => {
-    if (user) await fetchMembership(user)
+    const current = user || auth.currentUser
+    if (current) await fetchMembership(current)
   }
 
   useEffect(() => {
