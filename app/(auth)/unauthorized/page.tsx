@@ -1,12 +1,21 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase/client'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth/context'
 
 export default function UnauthorizedPage() {
   const router = useRouter()
+  const { membership, loading } = useAuth()
+
+  useEffect(() => {
+    if (!loading && membership?.active) {
+      router.replace('/dashboard')
+    }
+  }, [membership, loading, router])
 
   const handleSignOut = async () => {
     await signOut(auth)
