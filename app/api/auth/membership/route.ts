@@ -16,10 +16,17 @@ export async function GET(req: NextRequest) {
     const membershipDoc = await adminDb.collection('memberships').doc(decoded.uid).get()
 
     if (!membershipDoc.exists) {
-      // Check if there's a pending invitation for this email
-      const email = decoded.email
+      // Check if there's a pending invitation for this email.
+      // Invitations may have been saved with mixed casing — check lowercase first,
+      // then fall back to a case-insensitive scan.
+      const email = decoded.email?.toLowerCase()
       if (email) {
-        const pending = await adminDb.collection('pendingInvitations').doc(email).get()
+        let pending = await adminDb.collection('pendingInvitations').doc(email).get()
+        if (!pending.exists) {
+          const all = await adminDb.collection('pendingInvitations').get()
+          const match = all.docs.find(d => d.id.toLowerCase() === email)
+          if (match) pending = match
+        }
         if (pending.exists) {
           const inv = pending.data()!
           // Promote to full membership
@@ -33,7 +40,7 @@ export async function GET(req: NextRequest) {
           }
           await Promise.all([
             adminDb.collection('memberships').doc(decoded.uid).set(newMembership),
-            adminDb.collection('pendingInvitations').doc(email).delete(),
+            pending.ref.delete(),
           ])
           return NextResponse.json({ membership: { ...newMembership, uid: decoded.uid } })
         }

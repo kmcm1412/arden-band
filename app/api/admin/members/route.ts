@@ -30,7 +30,10 @@ export async function POST(req: NextRequest) {
   try {
     await verifyAdmin(req)
     const body = await req.json()
-    const { email, role } = body
+    const role = body.role
+    // Normalize email — Firebase ID tokens carry lowercase emails, so invitations
+    // must be stored lowercase or the first-login lookup will miss them
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
 
     if (!email || !role || !['admin', 'band_member'].includes(role)) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
