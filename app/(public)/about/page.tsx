@@ -25,6 +25,7 @@ export default async function AboutPage() {
   const instagramUrl = content.instagramUrl || 'https://www.instagram.com/ardenjams'
   const youtubeUrl = content.youtubeUrl || 'https://youtube.com/@ardenjams'
   const instagramHandle = content.instagramHandle || '@ardenjams'
+  const youtubeHandle = content.youtubeHandle || '@ardenjams'
 
   return (
     <div className="pt-24 pb-24 px-6">
@@ -75,7 +76,7 @@ export default async function AboutPage() {
                 className="flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors text-sm"
               >
                 <Play size={16} />
-                {instagramHandle}
+                {youtubeHandle}
               </a>
             </div>
           </div>

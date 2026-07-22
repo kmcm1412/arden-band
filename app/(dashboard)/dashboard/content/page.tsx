@@ -33,6 +33,10 @@ interface SiteContent {
   instagramUrl: string
   youtubeUrl: string
   instagramHandle: string
+  youtubeHandle: string
+  soundcloudUrl: string
+  // Links page (linktree-style /links)
+  linksTagline: string
 }
 
 const DEFAULTS: SiteContent = {
@@ -54,6 +58,9 @@ const DEFAULTS: SiteContent = {
   instagramUrl: 'https://www.instagram.com/ardenjams',
   youtubeUrl: 'https://youtube.com/@ardenjams',
   instagramHandle: '@ardenjams',
+  youtubeHandle: '@ardenjams',
+  soundcloudUrl: '',
+  linksTagline: 'Long Island-based Jam Band',
 }
 
 function ContentPageContent() {
@@ -427,6 +434,47 @@ function ContentPageContent() {
                 placeholder="@ardenjams"
               />
             </div>
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+                YouTube Handle <span className="normal-case">(displayed on about &amp; media pages)</span>
+              </label>
+              <input
+                type="text"
+                value={content.youtubeHandle}
+                onChange={e => setContent(c => ({ ...c, youtubeHandle: e.target.value }))}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                placeholder="@ardenjams"
+              />
+            </div>
+            <div className="bg-arden-surface border border-arden-border p-5">
+              <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+                SoundCloud URL <span className="normal-case">(shown on the /links page once set)</span>
+              </label>
+              <input
+                type="url"
+                value={content.soundcloudUrl}
+                onChange={e => setContent(c => ({ ...c, soundcloudUrl: e.target.value }))}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                placeholder="https://soundcloud.com/..."
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ─── LINKS PAGE ─── */}
+        <div>
+          <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase mb-4">Links Page (/links)</h2>
+          <div className="bg-arden-surface border border-arden-border p-5">
+            <label className="block text-xs tracking-widest uppercase text-arden-subtext mb-3">
+              Tagline <span className="normal-case">(short line under the band name — use /links in your socials bio)</span>
+            </label>
+            <input
+              type="text"
+              value={content.linksTagline}
+              onChange={e => setContent(c => ({ ...c, linksTagline: e.target.value }))}
+              className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+              placeholder="Long Island-based Jam Band"
+            />
           </div>
         </div>
 

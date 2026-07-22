@@ -32,7 +32,7 @@ async function getVideos(): Promise<Video[]> {
 export default async function MediaPage() {
   const [videos, content] = await Promise.all([getVideos(), getSiteContent()])
   const youtubeUrl = content.youtubeUrl || 'https://youtube.com/@ardenjams'
-  const instagramHandle = content.instagramHandle || '@ardenjams'
+  const youtubeHandle = content.youtubeHandle || '@ardenjams'
   const featured = videos.find(v => v.featured)
   const rest = videos.filter(v => !v.featured)
 
@@ -71,7 +71,7 @@ export default async function MediaPage() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 mt-2 text-arden-accent hover:text-arden-white transition-colors text-sm font-medium tracking-wider uppercase"
           >
-            {instagramHandle} →
+            {youtubeHandle} →
           </a>
         </div>
 
