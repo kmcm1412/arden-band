@@ -1,6 +1,6 @@
 import Link from 'next/link'
 /* eslint-disable @next/next/no-img-element */
-import { ArrowRight, Camera, Play } from 'lucide-react'
+import { ArrowRight, Camera, ChevronDown, Play } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
 import SubscribeForm from '@/components/SubscribeForm'
 
@@ -56,17 +56,27 @@ export default async function HomePage() {
   const instagramUrl = content.instagramUrl || 'https://www.instagram.com/ardenjams'
   const youtubeUrl = content.youtubeUrl || 'https://youtube.com/@ardenjams'
 
+  const nextShow = upcomingShows[0]
+  const nextShowLabel = nextShow
+    ? `${new Date(nextShow.datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${nextShow.venue}`
+    : ''
+
   return (
     <div className="overflow-x-hidden">
       {/* HERO */}
       <section className="relative min-h-screen flex items-end pb-24 px-6">
-        {/* Banner image — fills hero, fades at bottom for text */}
+        {/* Banner image — fills hero, slow drift, fades at bottom for text */}
         <div className="absolute inset-0 z-0 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/hero-banner.jpeg"
             alt="Arden performing live"
-            className="absolute top-0 left-0 w-full h-auto min-h-full object-cover object-top"
+            className="absolute top-0 left-0 w-full h-auto min-h-full object-cover object-top animate-kenburns"
+          />
+          {/* Top vignette — for nav readability */}
+          <div
+            className="absolute inset-x-0 top-0 h-32"
+            style={{ background: 'linear-gradient(to bottom, rgba(10,10,10,0.6), transparent)' }}
           />
           {/* Bottom fade — for text readability */}
           <div
@@ -79,18 +89,35 @@ export default async function HomePage() {
 
         <div className="relative z-10 max-w-7xl mx-auto w-full">
           <div className="max-w-3xl">
-            <p className="section-label mb-6">Est. {estYear}</p>
+            <div className="hero-enter flex flex-wrap items-center gap-4 mb-6">
+              <p className="section-label">Est. {estYear}</p>
+              {nextShow && (
+                <Link
+                  href="/shows"
+                  className="inline-flex items-center gap-2 border border-arden-accent/40 bg-arden-black/40 backdrop-blur-sm px-3 py-1.5 text-xs tracking-wider uppercase text-arden-accent hover:border-arden-accent hover:bg-arden-black/70 transition-all"
+                >
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-arden-accent opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-arden-accent" />
+                  </span>
+                  Next show · {nextShowLabel} <ArrowRight size={12} />
+                </Link>
+              )}
+            </div>
             <h1
-              className="heading-display text-[clamp(4rem,12vw,9rem)] text-arden-white mb-8 leading-none"
-              style={{ letterSpacing: '-0.02em' }}
+              className="hero-enter heading-display text-[clamp(4rem,12vw,9rem)] text-arden-white mb-8 leading-none"
+              style={{ letterSpacing: '-0.02em', animationDelay: '0.1s' }}
             >
               Arden
             </h1>
-            <p className="text-arden-subtext text-lg max-w-xl leading-relaxed mb-8">
+            <p
+              className="hero-enter text-arden-subtext text-lg max-w-xl leading-relaxed mb-8"
+              style={{ animationDelay: '0.2s' }}
+            >
               {heroTagline}
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 mb-6">
+            <div className="hero-enter flex flex-wrap items-center gap-4 mb-6" style={{ animationDelay: '0.3s' }}>
               <Link href="/media" className="btn-primary">
                 Watch <ArrowRight size={16} />
               </Link>
@@ -99,7 +126,7 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="hero-enter flex items-center gap-6" style={{ animationDelay: '0.4s' }}>
               <a
                 href={instagramUrl}
                 target="_blank"
@@ -120,6 +147,11 @@ export default async function HomePage() {
               </a>
             </div>
           </div>
+        </div>
+
+        {/* Scroll cue */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 hidden md:block">
+          <ChevronDown size={20} className="text-arden-subtext animate-scroll-cue" />
         </div>
       </section>
 
@@ -281,15 +313,21 @@ export default async function HomePage() {
       </section>
 
       {/* FAN LIST */}
-      <section className="py-20 px-6 border-t border-arden-border">
+      <section id="updates" className="py-20 px-6 border-t border-arden-border scroll-mt-16">
         <div className="max-w-7xl mx-auto">
-          <div className="max-w-xl">
-            <p className="section-label mb-3">Stay Connected</p>
-            <h2 className="heading-display text-4xl text-arden-white mb-4">{newsletterHeading}</h2>
-            <p className="text-arden-subtext text-sm mb-8 leading-relaxed">
-              {newsletterDescription}
-            </p>
-            <SubscribeForm />
+          <div className="bg-arden-surface border border-arden-border p-8 md:p-12">
+            <div className="grid md:grid-cols-2 gap-10 items-center">
+              <div>
+                <p className="section-label mb-3">Stay Connected</p>
+                <h2 className="heading-display text-4xl text-arden-white mb-4">{newsletterHeading}</h2>
+                <p className="text-arden-subtext text-sm leading-relaxed">
+                  {newsletterDescription}
+                </p>
+              </div>
+              <div>
+                <SubscribeForm />
+              </div>
+            </div>
           </div>
         </div>
       </section>

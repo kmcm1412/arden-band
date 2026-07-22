@@ -14,12 +14,15 @@ const playfair = Playfair_Display({
 })
 
 export const metadata: Metadata = {
-  title: 'Arden',
-  description: 'Official website of Arden',
+  title: 'Arden — Long Island Jam Band',
+  description:
+    'Official website of Arden, a Long Island-based jam band. Upcoming shows, live videos, merch, and updates.',
   openGraph: {
-    title: 'Arden',
-    description: 'Official website of Arden',
+    title: 'Arden — Long Island Jam Band',
+    description:
+      'Official website of Arden, a Long Island-based jam band. Upcoming shows, live videos, merch, and updates.',
     type: 'website',
+    images: ['/hero-banner.jpeg'],
   },
 }
 
