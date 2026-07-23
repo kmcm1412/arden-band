@@ -28,6 +28,15 @@ async function getFeaturedVideoId(): Promise<string | null> {
   }
 }
 
+async function getMerchTeaser(limit = 4) {
+  try {
+    const snap = await adminDb.collection('merch').orderBy('createdAt', 'desc').limit(limit).get()
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as { name: string; price: number; imageUrl?: string }) }))
+  } catch {
+    return []
+  }
+}
+
 async function getUpcomingShows(limit = 3) {
   try {
     const snap = await adminDb.collection('shows').get()
@@ -44,7 +53,12 @@ async function getUpcomingShows(limit = 3) {
 }
 
 export default async function HomePage() {
-  const [content, upcomingShows, featuredVideoId] = await Promise.all([getSiteContent(), getUpcomingShows(), getFeaturedVideoId()])
+  const [content, upcomingShows, featuredVideoId, merchItems] = await Promise.all([
+    getSiteContent(),
+    getUpcomingShows(),
+    getFeaturedVideoId(),
+    getMerchTeaser(),
+  ])
 
   const estYear = content.estYear || '2022'
   const heroTagline = content.heroTagline || 'Indie rock from the ground up. Raw energy, honest songs, and a sound that keeps moving.'
@@ -276,41 +290,52 @@ export default async function HomePage() {
       </section>
 
       {/* MERCH TEASER */}
-      <section className="py-20 px-6 border-t border-arden-border">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-12">
-            <div>
-              <p className="section-label mb-3">Store</p>
-              <h2 className="heading-display text-4xl text-arden-white">Merch</h2>
-            </div>
-            <Link
-              href="/merch"
-              className="hidden md:flex items-center gap-2 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider"
-            >
-              Shop All <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { name: 'Classic Tee', price: '$28', color: 'bg-arden-surface' },
-              { name: 'Arden Cap', price: '$24', color: 'bg-arden-muted' },
-              { name: 'Hoodie', price: '$55', color: 'bg-arden-surface' },
-              { name: 'Vinyl', price: '$32', color: 'bg-arden-muted' },
-            ].map((item, i) => (
-              <Link key={i} href="/merch" className="group">
-                <div className={`aspect-square ${item.color} flex items-center justify-center mb-3 overflow-hidden`}>
-                  <div className="w-16 h-16 border border-arden-border opacity-30 group-hover:opacity-60 transition-opacity" />
-                </div>
-                <p className="text-sm font-medium text-arden-text group-hover:text-arden-accent transition-colors">
-                  {item.name}
-                </p>
-                <p className="text-xs text-arden-subtext">{item.price}</p>
+      {merchItems.length > 0 && (
+        <section className="py-20 px-6 border-t border-arden-border">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-end justify-between mb-12">
+              <div>
+                <p className="section-label mb-3">Store</p>
+                <h2 className="heading-display text-4xl text-arden-white">Merch</h2>
+              </div>
+              <Link
+                href="/merch"
+                className="hidden md:flex items-center gap-2 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider"
+              >
+                Shop All <ArrowRight size={14} />
               </Link>
-            ))}
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {merchItems.map((item, i) => (
+                <Link key={item.id} href="/merch" className="group">
+                  <div className={`relative aspect-square ${i % 2 === 0 ? 'bg-arden-surface' : 'bg-arden-muted'} flex items-center justify-center mb-3 overflow-hidden`}>
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 border border-arden-border opacity-30 group-hover:opacity-60 transition-opacity" />
+                    )}
+                  </div>
+                  <p className="text-sm font-medium text-arden-text group-hover:text-arden-accent transition-colors">
+                    {item.name}
+                  </p>
+                  <p className="text-xs text-arden-subtext">${item.price}</p>
+                </Link>
+              ))}
+            </div>
+
+            <div className="mt-6 md:hidden text-center">
+              <Link href="/merch" className="btn-ghost">
+                Shop All
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* FAN LIST */}
       <section id="updates" className="py-20 px-6 border-t border-arden-border scroll-mt-16">

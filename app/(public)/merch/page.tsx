@@ -1,8 +1,13 @@
+/* eslint-disable @next/next/no-img-element */
 import { ShoppingBag } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
+import type { MerchItem } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Merch — Arden' }
+export const metadata = {
+  title: 'Merch — Arden',
+  description: 'Arden band merch — tees, caps, and more. Available at shows and by direct order.',
+}
 
 async function getSiteContent() {
   try {
@@ -13,65 +18,18 @@ async function getSiteContent() {
   }
 }
 
-const MERCH = [
-  {
-    id: '1',
-    name: 'Arden Classic Tee',
-    description: 'Heavyweight unisex tee. 100% cotton.',
-    price: 28,
-    category: 'Apparel',
-    available: true,
-    color: 'bg-arden-surface',
-  },
-  {
-    id: '2',
-    name: 'Arden Logo Cap',
-    description: 'Structured 5-panel. Embroidered logo.',
-    price: 24,
-    category: 'Accessories',
-    available: true,
-    color: 'bg-arden-muted',
-  },
-  {
-    id: '3',
-    name: 'Tour Hoodie',
-    description: 'Fleece pullover. Limited run.',
-    price: 55,
-    category: 'Apparel',
-    available: true,
-    color: 'bg-arden-surface',
-  },
-  {
-    id: '4',
-    name: 'Demo Vinyl',
-    description: '7" vinyl single. Hand-numbered.',
-    price: 32,
-    category: 'Music',
-    available: true,
-    color: 'bg-arden-muted',
-  },
-  {
-    id: '5',
-    name: 'Arden Tote',
-    description: 'Canvas tote bag. Screenprinted.',
-    price: 18,
-    category: 'Accessories',
-    available: true,
-    color: 'bg-arden-surface',
-  },
-  {
-    id: '6',
-    name: 'Sticker Pack',
-    description: 'Set of 5 die-cut stickers.',
-    price: 8,
-    category: 'Accessories',
-    available: true,
-    color: 'bg-arden-muted',
-  },
-]
+async function getMerch(): Promise<MerchItem[]> {
+  try {
+    const snap = await adminDb.collection('merch').orderBy('createdAt', 'desc').get()
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<MerchItem, 'id'>) }))
+  } catch (err) {
+    console.error('[merch] Failed to fetch merch:', err)
+    return []
+  }
+}
 
 export default async function MerchPage() {
-  const content = await getSiteContent()
+  const [content, items] = await Promise.all([getSiteContent(), getMerch()])
   const merchNote = content.merchNote || 'Merch available at shows and through direct order — reach out via the contact form.'
 
   return (
@@ -82,45 +40,69 @@ export default async function MerchPage() {
           <h1 className="heading-display text-5xl md:text-7xl text-arden-white">Merch</h1>
         </div>
 
-        <div className="mb-8 p-4 bg-arden-surface border border-arden-border text-sm text-arden-subtext">
-          {merchNote}{' '}
-          <a href="/about" className="text-arden-accent hover:text-arden-white transition-colors">
-            Contact us
-          </a>
-          .
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 lg:gap-8">
-          {MERCH.map((item) => (
-            <div key={item.id} className="group">
-              <div className={`relative aspect-square ${item.color} flex items-center justify-center mb-4 overflow-hidden`}>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <ShoppingBag
-                    size={32}
-                    className="text-arden-border group-hover:text-arden-accent transition-colors"
-                  />
-                </div>
-                {!item.available && (
-                  <div className="absolute inset-0 bg-arden-black/60 flex items-center justify-center">
-                    <span className="text-xs tracking-widest uppercase text-arden-subtext border border-arden-border px-3 py-1">
-                      Sold Out
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div>
-                <span className="text-xs tracking-widest uppercase text-arden-subtext">
-                  {item.category}
-                </span>
-                <h3 className="font-medium text-arden-white mt-1 group-hover:text-arden-accent transition-colors">
-                  {item.name}
-                </h3>
-                <p className="text-arden-subtext text-sm mt-0.5 mb-2">{item.description}</p>
-                <p className="text-arden-accent font-mono font-medium">${item.price}</p>
-              </div>
+        {items.length > 0 ? (
+          <>
+            <div className="mb-8 p-4 bg-arden-surface border border-arden-border text-sm text-arden-subtext">
+              {merchNote}{' '}
+              <a href="/about" className="text-arden-accent hover:text-arden-white transition-colors">
+                Contact us
+              </a>
+              .
             </div>
-          ))}
-        </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 lg:gap-8">
+              {items.map((item) => (
+                <div key={item.id} className="group">
+                  <div className="relative aspect-square bg-arden-surface flex items-center justify-center mb-4 overflow-hidden">
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <ShoppingBag
+                        size={32}
+                        className="text-arden-border group-hover:text-arden-accent transition-colors"
+                      />
+                    )}
+                    {!item.available && (
+                      <div className="absolute inset-0 bg-arden-black/60 flex items-center justify-center">
+                        <span className="text-xs tracking-widest uppercase text-arden-white border border-arden-muted px-3 py-1 bg-arden-black/60">
+                          Sold Out
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-xs tracking-widest uppercase text-arden-subtext">
+                      {item.category}
+                    </span>
+                    <h3 className="font-medium text-arden-white mt-1 group-hover:text-arden-accent transition-colors">
+                      {item.name}
+                    </h3>
+                    {item.description && (
+                      <p className="text-arden-subtext text-sm mt-0.5 mb-2">{item.description}</p>
+                    )}
+                    <p className="text-arden-accent font-mono font-medium">${item.price}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="py-20 text-center">
+            <ShoppingBag size={32} className="mx-auto text-arden-border mb-4" />
+            <p className="text-arden-subtext text-lg">Merch is coming soon.</p>
+            <p className="text-arden-subtext text-sm mt-2">
+              Catch us at a show, or{' '}
+              <a href="/about" className="text-arden-accent hover:text-arden-white transition-colors">
+                reach out
+              </a>{' '}
+              to get first dibs.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -11,6 +11,7 @@ import {
   Music,
   ListMusic,
   LayoutDashboard,
+  ShoppingBag,
   Users,
   Megaphone,
   Menu,
@@ -30,6 +31,7 @@ const navItems = [
 ]
 
 const adminItems = [
+  { href: '/dashboard/merch', label: 'Merch', icon: ShoppingBag },
   { href: '/dashboard/subscribers', label: 'Fan List', icon: Users },
   { href: '/dashboard/access', label: 'Access', icon: Users },
 ]
