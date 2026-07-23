@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowRight, Camera, ChevronDown, Play } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
 import SubscribeForm from '@/components/SubscribeForm'
+import LiteYouTube from '@/components/LiteYouTube'
 
 export const dynamic = 'force-dynamic'
 
@@ -211,13 +212,7 @@ export default async function HomePage() {
           {featuredVideoId ? (
             <div className="mb-8 group">
               <div className="relative aspect-video bg-arden-surface overflow-hidden">
-                <iframe
-                  src={`https://www.youtube.com/embed/${featuredVideoId}`}
-                  className="absolute inset-0 w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  title="Arden - Featured Video"
-                />
+                <LiteYouTube videoId={featuredVideoId} title="Arden — Featured Video" />
               </div>
             </div>
           ) : (

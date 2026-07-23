@@ -11,6 +11,7 @@ import {
   Music,
   ListMusic,
   LayoutDashboard,
+  Mail,
   ShoppingBag,
   Users,
   Megaphone,
@@ -28,6 +29,7 @@ const navItems = [
   { href: '/dashboard/setlists', label: 'Set Lists', icon: ListMusic },
   { href: '/dashboard/content', label: 'Content', icon: LayoutDashboard },
   { href: '/dashboard/opportunities', label: 'Opportunities', icon: Megaphone },
+  { href: '/dashboard/messages', label: 'Messages', icon: Mail },
 ]
 
 const adminItems = [

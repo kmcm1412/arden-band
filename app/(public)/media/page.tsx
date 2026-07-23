@@ -1,7 +1,11 @@
 import { adminDb } from '@/lib/firebase/admin'
+import LiteYouTube from '@/components/LiteYouTube'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Media — Arden' }
+export const metadata = {
+  title: 'Media — Arden',
+  description: 'Watch Arden live — full sets, jams, and sessions from the Long Island jam band.',
+}
 
 async function getSiteContent() {
   try {
@@ -47,13 +51,7 @@ export default async function MediaPage() {
         {featured && (
           <div className="mb-16">
             <div className="relative aspect-video bg-arden-surface overflow-hidden">
-              <iframe
-                src={`https://www.youtube.com/embed/${featured.youtubeId}`}
-                className="absolute inset-0 w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                title={featured.title}
-              />
+              <LiteYouTube videoId={featured.youtubeId} title={featured.title} />
             </div>
             <div className="mt-4">
               <p className="section-label mb-1">Featured</p>
@@ -80,14 +78,7 @@ export default async function MediaPage() {
             {rest.map((video) => (
               <div key={video.id} className="group">
                 <div className="relative aspect-video bg-arden-surface overflow-hidden mb-3">
-                  <iframe
-                    src={`https://www.youtube.com/embed/${video.youtubeId}`}
-                    className="absolute inset-0 w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    title={video.title}
-                    loading="lazy"
-                  />
+                  <LiteYouTube videoId={video.youtubeId} title={video.title} />
                 </div>
                 <h3 className="font-medium text-arden-text group-hover:text-arden-accent transition-colors">
                   {video.title}
