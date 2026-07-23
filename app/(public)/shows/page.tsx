@@ -3,7 +3,10 @@ import { MapPin, ExternalLink } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Shows — Arden' }
+export const metadata = {
+  title: 'Shows — Arden',
+  description: 'Upcoming Arden shows on Long Island and beyond — dates, venues, and tickets.',
+}
 
 async function getSiteContent() {
   try {
@@ -55,9 +58,33 @@ export default async function ShowsPage() {
   const showsEmptyMessage = content.showsEmptyMessage || 'No upcoming shows announced.'
   const showsEmptySubtext = content.showsEmptySubtext || 'Follow us on Instagram for updates.'
 
+  const eventsJsonLd = upcoming.map(show => ({
+    '@context': 'https://schema.org',
+    '@type': 'MusicEvent',
+    name: `Arden at ${show.venue}`,
+    startDate: show.datetime,
+    location: {
+      '@type': 'Place',
+      name: show.venue,
+      address: show.location,
+    },
+    performer: { '@type': 'MusicGroup', name: 'Arden' },
+    eventStatus:
+      show.status === 'cancelled'
+        ? 'https://schema.org/EventCancelled'
+        : 'https://schema.org/EventScheduled',
+    ...(show.ticketLink ? { offers: { '@type': 'Offer', url: show.ticketLink } } : {}),
+  }))
+
   return (
     <div className="pt-24 pb-24 px-6">
       <div className="max-w-5xl mx-auto">
+        {eventsJsonLd.length > 0 && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(eventsJsonLd) }}
+          />
+        )}
         <div className="mb-16">
           <p className="section-label mb-3">Live</p>
           <h1 className="heading-display text-5xl md:text-7xl text-arden-white">Shows</h1>

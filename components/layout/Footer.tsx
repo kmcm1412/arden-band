@@ -34,6 +34,7 @@ export default async function Footer() {
               href={instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="Arden on Instagram"
               className="text-arden-subtext hover:text-arden-accent transition-colors"
             >
               <Camera size={18} />
@@ -42,6 +43,7 @@ export default async function Footer() {
               href={youtubeUrl}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="Arden on YouTube"
               className="text-arden-subtext hover:text-arden-accent transition-colors"
             >
               <Play size={18} />

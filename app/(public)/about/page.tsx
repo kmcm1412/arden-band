@@ -3,7 +3,10 @@ import { adminDb } from '@/lib/firebase/admin'
 import ContactForm from '@/components/ContactForm'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'About — Arden' }
+export const metadata = {
+  title: 'About — Arden',
+  description: 'Meet Arden — a genre-blending Long Island jam band. The story, the members, and how to get in touch.',
+}
 
 async function getSiteContent() {
   try {

@@ -76,8 +76,23 @@ export default async function HomePage() {
     ? `${new Date(nextShow.datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${nextShow.venue}`
     : ''
 
+  const bandJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'MusicGroup',
+    name: 'Arden',
+    description: bio,
+    genre: 'Jam Band',
+    foundingDate: estYear,
+    url: 'https://ardenjams.netlify.app',
+    sameAs: [instagramUrl, youtubeUrl],
+  }
+
   return (
     <div className="overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(bandJsonLd) }}
+      />
       {/* HERO */}
       <section className="relative min-h-screen flex items-end pb-24 px-6">
         {/* Banner image — fills hero, slow drift, fades at bottom for text */}
