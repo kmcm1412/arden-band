@@ -65,8 +65,9 @@ export default async function HomePage() {
   const youtubeUrl = content.youtubeUrl || 'https://youtube.com/@ardenjams'
   const soundcloudUrl = content.soundcloudUrl || ''
 
-  const featuredVideo = videos.find(v => v.featured) || videos[0] || null
-  const recentVideos = videos.filter(v => v.youtubeId !== featuredVideo?.youtubeId).slice(0, 3)
+  const longform = videos.filter(v => !v.isShort)
+  const featuredVideo = longform.find(v => v.featured) || longform[0] || null
+  const recentVideos = longform.filter(v => v.youtubeId !== featuredVideo?.youtubeId).slice(0, 3)
 
   const nextShow = upcomingShows[0]
   const nextShowLabel = nextShow
