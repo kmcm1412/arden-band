@@ -86,7 +86,7 @@ export default async function AboutPage() {
         </div>
 
         {/* Contact */}
-        <div className="border-t border-arden-border pt-16">
+        <div id="contact" className="border-t border-arden-border pt-16 scroll-mt-24">
           <div className="max-w-2xl">
             <p className="section-label mb-3">Get in Touch</p>
             <h2 className="heading-display text-3xl text-arden-white mb-8">Contact</h2>

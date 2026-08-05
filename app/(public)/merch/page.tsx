@@ -1,6 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
+import { notFound } from 'next/navigation'
 import { ShoppingBag } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
+import { getVisibility } from '@/lib/visibility'
 import type { MerchItem } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -29,6 +31,9 @@ async function getMerch(): Promise<MerchItem[]> {
 }
 
 export default async function MerchPage() {
+  const visibility = await getVisibility()
+  if (!visibility.merch) notFound()
+
   const [content, items] = await Promise.all([getSiteContent(), getMerch()])
   const merchNote = content.merchNote || 'Merch available at shows and through direct order — reach out via the contact form.'
 

@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { Camera, Play } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
+import { getVisibility } from '@/lib/visibility'
+import { SoundCloudIcon, YouTubeIcon, InstagramIcon } from '@/components/BrandIcons'
 
 async function getSiteContent() {
   try {
@@ -12,9 +13,17 @@ async function getSiteContent() {
 }
 
 export default async function Footer() {
-  const content = await getSiteContent()
+  const [content, visibility] = await Promise.all([getSiteContent(), getVisibility()])
   const instagramUrl = content.instagramUrl || 'https://www.instagram.com/ardenjams'
   const youtubeUrl = content.youtubeUrl || 'https://youtube.com/@ardenjams'
+  const soundcloudUrl = content.soundcloudUrl || ''
+
+  const footerLinks = [
+    ...(visibility.shows ? [{ href: '/shows', label: 'Shows' }] : []),
+    ...(visibility.merch ? [{ href: '/merch', label: 'Merch' }] : []),
+    { href: '/about', label: 'About' },
+    { href: '/links', label: 'Links' },
+  ]
 
   return (
     <footer className="border-t border-arden-border mt-24">
@@ -37,7 +46,7 @@ export default async function Footer() {
               aria-label="Arden on Instagram"
               className="text-arden-subtext hover:text-arden-accent transition-colors"
             >
-              <Camera size={18} />
+              <InstagramIcon size={18} />
             </a>
             <a
               href={youtubeUrl}
@@ -46,14 +55,27 @@ export default async function Footer() {
               aria-label="Arden on YouTube"
               className="text-arden-subtext hover:text-arden-accent transition-colors"
             >
-              <Play size={18} />
+              <YouTubeIcon size={18} />
             </a>
+            {soundcloudUrl && (
+              <a
+                href={soundcloudUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Arden on SoundCloud"
+                className="text-arden-subtext hover:text-arden-accent transition-colors"
+              >
+                <SoundCloudIcon size={18} />
+              </a>
+            )}
           </div>
 
           <nav className="flex items-center gap-6 text-xs tracking-wider uppercase text-arden-subtext">
-            <Link href="/shows" className="hover:text-arden-text transition-colors">Shows</Link>
-            <Link href="/merch" className="hover:text-arden-text transition-colors">Merch</Link>
-            <Link href="/about" className="hover:text-arden-text transition-colors">About</Link>
+            {footerLinks.map(l => (
+              <Link key={l.href} href={l.href} className="hover:text-arden-text transition-colors">
+                {l.label}
+              </Link>
+            ))}
           </nav>
         </div>
       </div>

@@ -63,8 +63,26 @@ const DEFAULTS: SiteContent = {
   linksTagline: 'Long Island-based Jam Band',
 }
 
+interface Visibility {
+  merch: boolean
+  media: boolean
+  shows: boolean
+  fanlist: boolean
+}
+
+const VISIBILITY_DEFAULTS: Visibility = { merch: true, media: true, shows: true, fanlist: true }
+
+const VISIBILITY_SECTIONS: { key: keyof Visibility; label: string; desc: string }[] = [
+  { key: 'shows', label: 'Shows', desc: 'Shows page, nav link, and homepage shows section' },
+  { key: 'media', label: 'Media', desc: 'Media page, nav link, and homepage videos section' },
+  { key: 'merch', label: 'Merch', desc: 'Merch page, nav link, and homepage merch section' },
+  { key: 'fanlist', label: 'Fan List Signup', desc: 'Homepage email signup section' },
+]
+
 function ContentPageContent() {
   const [content, setContent] = useState<SiteContent>(DEFAULTS)
+  const [visibility, setVisibility] = useState<Visibility>(VISIBILITY_DEFAULTS)
+  const [togglingKey, setTogglingKey] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -73,13 +91,34 @@ function ContentPageContent() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    getDoc(doc(db, 'siteContent', 'home')).then(snap => {
-      if (snap.exists()) setContent({ ...DEFAULTS, ...(snap.data() as SiteContent) })
-    }).catch(err => {
+    Promise.all([
+      getDoc(doc(db, 'siteContent', 'home')).then(snap => {
+        if (snap.exists()) setContent({ ...DEFAULTS, ...(snap.data() as SiteContent) })
+      }),
+      getDoc(doc(db, 'siteContent', 'visibility')).then(snap => {
+        if (snap.exists()) setVisibility({ ...VISIBILITY_DEFAULTS, ...(snap.data() as Visibility) })
+      }),
+    ]).catch(err => {
       console.error('Failed to load site content:', err)
       setError('Failed to load content. Check console for details.')
     }).finally(() => setLoading(false))
   }, [])
+
+  // Toggles save immediately — no "Save Changes" needed
+  async function toggleSection(key: keyof Visibility) {
+    const next = { ...visibility, [key]: !visibility[key] }
+    setTogglingKey(key)
+    setError('')
+    try {
+      await setDoc(doc(db, 'siteContent', 'visibility'), next)
+      setVisibility(next)
+    } catch (err) {
+      console.error('Failed to update visibility:', err)
+      setError(err instanceof Error ? err.message : 'Failed to update visibility.')
+    } finally {
+      setTogglingKey(null)
+    }
+  }
 
   async function handleSave() {
     setSaving(true)
@@ -167,6 +206,44 @@ function ContentPageContent() {
       )}
 
       <div className="space-y-8">
+        {/* ─── SECTIONS & PAGES ─── */}
+        <div>
+          <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase mb-1">Sections &amp; Pages</h2>
+          <p className="text-xs text-arden-subtext mb-4">
+            Turn parts of the public site on or off. Changes go live immediately — no save needed.
+          </p>
+          <div className="space-y-2">
+            {VISIBILITY_SECTIONS.map(section => (
+              <div
+                key={section.key}
+                className="flex items-center justify-between gap-4 bg-arden-surface border border-arden-border p-4"
+              >
+                <div>
+                  <p className="text-sm font-medium text-arden-white">{section.label}</p>
+                  <p className="text-xs text-arden-subtext mt-0.5">{section.desc}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={visibility[section.key]}
+                  aria-label={`Toggle ${section.label}`}
+                  disabled={togglingKey === section.key}
+                  onClick={() => toggleSection(section.key)}
+                  className={`relative flex-shrink-0 w-11 h-6 transition-colors disabled:opacity-50 ${
+                    visibility[section.key] ? 'bg-arden-accent' : 'bg-arden-muted'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 w-5 h-5 bg-arden-black transition-all ${
+                      visibility[section.key] ? 'left-[22px]' : 'left-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* ─── HOMEPAGE: HERO ─── */}
         <div>
           <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase mb-4">Homepage — Hero</h2>

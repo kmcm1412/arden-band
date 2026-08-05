@@ -1,9 +1,11 @@
 import Link from 'next/link'
 /* eslint-disable @next/next/no-img-element */
-import { ArrowRight, Camera, ChevronDown, Play } from 'lucide-react'
+import { ArrowRight, ChevronDown } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
+import { getVisibility } from '@/lib/visibility'
 import SubscribeForm from '@/components/SubscribeForm'
 import LiteYouTube from '@/components/LiteYouTube'
+import { SoundCloudIcon, YouTubeIcon, InstagramIcon } from '@/components/BrandIcons'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,16 +18,19 @@ async function getSiteContent() {
   }
 }
 
-async function getFeaturedVideoId(): Promise<string | null> {
+interface HomeVideo {
+  id: string
+  youtubeId: string
+  title: string
+  featured?: boolean
+}
+
+async function getVideos(): Promise<HomeVideo[]> {
   try {
-    const snap = await adminDb.collection('media').where('featured', '==', true).limit(1).get()
-    if (!snap.empty) return snap.docs[0].data().youtubeId as string
-    // Fall back to most recent video
-    const latest = await adminDb.collection('media').orderBy('createdAt', 'desc').limit(1).get()
-    if (!latest.empty) return latest.docs[0].data().youtubeId as string
-    return null
+    const snap = await adminDb.collection('media').orderBy('createdAt', 'desc').limit(8).get()
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<HomeVideo, 'id'>) }))
   } catch {
-    return null
+    return []
   }
 }
 
@@ -54,11 +59,12 @@ async function getUpcomingShows(limit = 3) {
 }
 
 export default async function HomePage() {
-  const [content, upcomingShows, featuredVideoId, merchItems] = await Promise.all([
+  const [content, upcomingShows, videos, merchItems, visibility] = await Promise.all([
     getSiteContent(),
     getUpcomingShows(),
-    getFeaturedVideoId(),
+    getVideos(),
     getMerchTeaser(),
+    getVisibility(),
   ])
 
   const estYear = content.estYear || '2022'
@@ -70,6 +76,10 @@ export default async function HomePage() {
   const newsletterDescription = content.newsletterDescription || 'New shows, releases, and merch drops — straight to your inbox.'
   const instagramUrl = content.instagramUrl || 'https://www.instagram.com/ardenjams'
   const youtubeUrl = content.youtubeUrl || 'https://youtube.com/@ardenjams'
+  const soundcloudUrl = content.soundcloudUrl || ''
+
+  const featuredVideo = videos.find(v => v.featured) || videos[0] || null
+  const recentVideos = videos.filter(v => v.id !== featuredVideo?.id).slice(0, 3)
 
   const nextShow = upcomingShows[0]
   const nextShowLabel = nextShow
@@ -84,8 +94,14 @@ export default async function HomePage() {
     genre: 'Jam Band',
     foundingDate: estYear,
     url: 'https://ardenjams.netlify.app',
-    sameAs: [instagramUrl, youtubeUrl],
+    sameAs: [instagramUrl, youtubeUrl, ...(soundcloudUrl ? [soundcloudUrl] : [])],
   }
+
+  const socials = [
+    { href: instagramUrl, label: 'Instagram', icon: <InstagramIcon size={16} /> },
+    { href: youtubeUrl, label: 'YouTube', icon: <YouTubeIcon size={16} /> },
+    ...(soundcloudUrl ? [{ href: soundcloudUrl, label: 'SoundCloud', icon: <SoundCloudIcon size={16} /> }] : []),
+  ]
 
   return (
     <div className="overflow-x-hidden">
@@ -93,33 +109,34 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(bandJsonLd) }}
       />
-      {/* HERO */}
-      <section className="relative min-h-screen flex items-end pb-24 px-6">
-        {/* Banner image — fills hero, slow drift, fades at bottom for text */}
+
+      {/* HERO — full-bleed live shot; the photo carries the ARDEN lettering */}
+      <section className="relative h-[100svh] min-h-[560px] flex items-end pb-16 md:pb-20 px-6">
         <div className="absolute inset-0 z-0 overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/hero-banner.jpeg"
-            alt="Arden performing live"
-            className="absolute top-0 left-0 w-full h-auto min-h-full object-cover object-top animate-kenburns"
+            alt="Arden performing live — the band on stage under neon ARDEN lettering"
+            fetchPriority="high"
+            className="absolute inset-0 w-full h-full object-cover animate-kenburns"
+            style={{ objectPosition: 'center 42%' }}
           />
           {/* Top vignette — for nav readability */}
           <div
-            className="absolute inset-x-0 top-0 h-32"
-            style={{ background: 'linear-gradient(to bottom, rgba(10,10,10,0.6), transparent)' }}
+            className="absolute inset-x-0 top-0 h-28"
+            style={{ background: 'linear-gradient(to bottom, rgba(10,10,10,0.55), transparent)' }}
           />
-          {/* Bottom fade — for text readability */}
+          {/* Bottom fade — kept low so the photo stays the star */}
           <div
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(to bottom, transparent 35%, rgba(10,10,10,0.5) 55%, rgba(10,10,10,0.85) 72%, #0a0a0a 88%)',
+              background: 'linear-gradient(to bottom, transparent 52%, rgba(10,10,10,0.45) 68%, rgba(10,10,10,0.82) 84%, #0a0a0a 97%)',
             }}
           />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto w-full">
           <div className="max-w-3xl">
-            <div className="hero-enter flex flex-wrap items-center gap-4 mb-6">
+            <div className="hero-enter flex flex-wrap items-center gap-4 mb-4">
               <p className="section-label">Est. {estYear}</p>
               {nextShow && (
                 <Link
@@ -135,52 +152,50 @@ export default async function HomePage() {
               )}
             </div>
             <h1
-              className="hero-enter heading-display text-[clamp(4rem,12vw,9rem)] text-arden-white mb-8 leading-none"
+              className="hero-enter heading-display text-[clamp(2.75rem,7vw,5rem)] text-arden-white mb-4 leading-none"
               style={{ letterSpacing: '-0.02em', animationDelay: '0.1s' }}
             >
               Arden
             </h1>
             <p
-              className="hero-enter text-arden-subtext text-lg max-w-xl leading-relaxed mb-8"
+              className="hero-enter text-arden-subtext text-base md:text-lg max-w-xl leading-relaxed mb-6"
               style={{ animationDelay: '0.2s' }}
             >
               {heroTagline}
             </p>
 
             <div className="hero-enter flex flex-wrap items-center gap-4 mb-6" style={{ animationDelay: '0.3s' }}>
-              <Link href="/media" className="btn-primary">
-                Watch <ArrowRight size={16} />
-              </Link>
-              <Link href="/shows" className="btn-ghost">
-                See Shows
-              </Link>
+              {visibility.media && (
+                <Link href="/media" className="btn-primary">
+                  Watch <ArrowRight size={16} />
+                </Link>
+              )}
+              {visibility.shows && (
+                <Link href="/shows" className="btn-ghost">
+                  See Shows
+                </Link>
+              )}
             </div>
 
             <div className="hero-enter flex items-center gap-6" style={{ animationDelay: '0.4s' }}>
-              <a
-                href={instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors"
-              >
-                <Camera size={16} />
-                <span className="text-xs tracking-widest uppercase">Instagram</span>
-              </a>
-              <a
-                href={youtubeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors"
-              >
-                <Play size={16} />
-                <span className="text-xs tracking-widest uppercase">YouTube</span>
-              </a>
+              {socials.map(s => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors"
+                >
+                  {s.icon}
+                  <span className="text-xs tracking-widest uppercase">{s.label}</span>
+                </a>
+              ))}
             </div>
           </div>
         </div>
 
         {/* Scroll cue */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 hidden md:block">
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 hidden md:block">
           <ChevronDown size={20} className="text-arden-subtext animate-scroll-cue" />
         </div>
       </section>
@@ -208,99 +223,118 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* FEATURED VIDEO */}
-      <section className="py-20 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-12">
-            <div>
-              <p className="section-label mb-3">Watch</p>
-              <h2 className="heading-display text-4xl text-arden-white">Latest Videos</h2>
+      {/* VIDEOS */}
+      {visibility.media && featuredVideo && (
+        <section className="py-20 px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-end justify-between mb-12">
+              <div>
+                <p className="section-label mb-3">Watch</p>
+                <h2 className="heading-display text-4xl text-arden-white">Latest Videos</h2>
+              </div>
+              <Link
+                href="/media"
+                className="hidden md:flex items-center gap-2 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider"
+              >
+                All Videos <ArrowRight size={14} />
+              </Link>
             </div>
-            <Link
-              href="/media"
-              className="hidden md:flex items-center gap-2 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider"
-            >
-              All Videos <ArrowRight size={14} />
-            </Link>
-          </div>
 
-          {featuredVideoId ? (
-            <div className="mb-8 group">
+            <div className="mb-8">
               <div className="relative aspect-video bg-arden-surface overflow-hidden">
-                <LiteYouTube videoId={featuredVideoId} title="Arden — Featured Video" />
+                <LiteYouTube videoId={featuredVideo.youtubeId} title={featuredVideo.title || 'Arden — Featured Video'} />
               </div>
             </div>
-          ) : (
-            <div className="mb-8 aspect-video bg-arden-surface flex items-center justify-center">
-              <a href={youtubeUrl} target="_blank" rel="noopener noreferrer"
-                className="text-arden-accent hover:text-arden-white transition-colors text-sm tracking-wider uppercase">
-                Watch on YouTube →
-              </a>
-            </div>
-          )}
 
-          <div className="text-center mt-8">
-            <Link href="/media" className="btn-ghost">
-              View All Videos
-            </Link>
+            {recentVideos.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                {recentVideos.map(v => (
+                  <div key={v.id}>
+                    <div className="relative aspect-video bg-arden-surface overflow-hidden">
+                      <LiteYouTube videoId={v.youtubeId} title={v.title} />
+                    </div>
+                    <p className="mt-2 text-sm text-arden-subtext truncate">{v.title}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="text-center mt-4">
+              <Link href="/media" className="btn-ghost">
+                View All Videos
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* SHOWS TEASER */}
-      <section className="py-20 px-6 border-t border-arden-border">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-12">
-            <div>
-              <p className="section-label mb-3">Live</p>
-              <h2 className="heading-display text-4xl text-arden-white">Upcoming Shows</h2>
+      {visibility.shows && (
+        <section className="py-20 px-6 border-t border-arden-border">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-end justify-between mb-12">
+              <div>
+                <p className="section-label mb-3">Live</p>
+                <h2 className="heading-display text-4xl text-arden-white">Upcoming Shows</h2>
+              </div>
+              <Link
+                href="/shows"
+                className="hidden md:flex items-center gap-2 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider"
+              >
+                All Shows <ArrowRight size={14} />
+              </Link>
             </div>
-            <Link
-              href="/shows"
-              className="hidden md:flex items-center gap-2 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider"
-            >
-              All Shows <ArrowRight size={14} />
-            </Link>
-          </div>
 
-          {upcomingShows.length > 0 ? (
-            <div className="space-y-px">
-              {upcomingShows.map((show) => {
-                const d = new Date(show.datetime)
-                const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                return (
-                  <div
-                    key={show.id}
-                    className="group flex items-center justify-between py-5 px-6 bg-arden-surface hover:bg-arden-muted transition-colors cursor-pointer border-l-2 border-transparent hover:border-arden-accent"
-                  >
-                    <div className="flex items-center gap-8">
-                      <span className="text-arden-accent font-mono text-sm w-16">{label}</span>
-                      <div>
-                        <p className="text-arden-white font-medium">{show.venue}</p>
-                        <p className="text-arden-subtext text-sm">{show.location}</p>
+            {upcomingShows.length > 0 ? (
+              <>
+                <div className="space-y-px">
+                  {upcomingShows.map((show) => {
+                    const d = new Date(show.datetime)
+                    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    return (
+                      <div
+                        key={show.id}
+                        className="group flex items-center justify-between py-5 px-6 bg-arden-surface hover:bg-arden-muted transition-colors cursor-pointer border-l-2 border-transparent hover:border-arden-accent"
+                      >
+                        <div className="flex items-center gap-8">
+                          <span className="text-arden-accent font-mono text-sm w-16">{label}</span>
+                          <div>
+                            <p className="text-arden-white font-medium">{show.venue}</p>
+                            <p className="text-arden-subtext text-sm">{show.location}</p>
+                          </div>
+                        </div>
+                        <Link href="/shows" className="btn-ghost text-xs py-2 px-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                          Info
+                        </Link>
                       </div>
-                    </div>
-                    <Link href="/shows" className="btn-ghost text-xs py-2 px-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Info
-                    </Link>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <p className="text-arden-subtext">No upcoming shows. Check back soon.</p>
-          )}
-
-          <div className="mt-6 md:hidden text-center">
-            <Link href="/shows" className="btn-ghost">
-              All Shows
-            </Link>
+                    )
+                  })}
+                </div>
+                <div className="mt-6 md:hidden text-center">
+                  <Link href="/shows" className="btn-ghost">
+                    All Shows
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <div className="bg-arden-surface border border-arden-border p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <p className="text-arden-white text-lg font-medium mb-1">Nothing on the books — yet.</p>
+                  <p className="text-arden-subtext text-sm">
+                    Want Arden at your venue, party, or backyard? We travel well.
+                  </p>
+                </div>
+                <Link href="/about#contact" className="btn-primary flex-shrink-0 self-start md:self-auto">
+                  Book the Band <ArrowRight size={16} />
+                </Link>
+              </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* MERCH TEASER */}
-      {merchItems.length > 0 && (
+      {visibility.merch && merchItems.length > 0 && (
         <section className="py-20 px-6 border-t border-arden-border">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-end justify-between mb-12">
@@ -348,24 +382,26 @@ export default async function HomePage() {
       )}
 
       {/* FAN LIST */}
-      <section id="updates" className="py-20 px-6 border-t border-arden-border scroll-mt-16">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-arden-surface border border-arden-border p-8 md:p-12">
-            <div className="grid md:grid-cols-2 gap-10 items-center">
-              <div>
-                <p className="section-label mb-3">Stay Connected</p>
-                <h2 className="heading-display text-4xl text-arden-white mb-4">{newsletterHeading}</h2>
-                <p className="text-arden-subtext text-sm leading-relaxed">
-                  {newsletterDescription}
-                </p>
-              </div>
-              <div>
-                <SubscribeForm />
+      {visibility.fanlist && (
+        <section id="updates" className="py-20 px-6 border-t border-arden-border scroll-mt-16">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-arden-surface border border-arden-border p-8 md:p-12">
+              <div className="grid md:grid-cols-2 gap-10 items-center">
+                <div>
+                  <p className="section-label mb-3">Stay Connected</p>
+                  <h2 className="heading-display text-4xl text-arden-white mb-4">{newsletterHeading}</h2>
+                  <p className="text-arden-subtext text-sm leading-relaxed">
+                    {newsletterDescription}
+                  </p>
+                </div>
+                <div>
+                  <SubscribeForm />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   )
 }

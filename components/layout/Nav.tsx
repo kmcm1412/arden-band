@@ -5,16 +5,16 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { SectionVisibility } from '@/lib/visibility'
 
-const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/media', label: 'Media' },
-  { href: '/shows', label: 'Shows' },
-  { href: '/merch', label: 'Merch' },
-  { href: '/about', label: 'About' },
-]
-
-export default function Nav() {
+export default function Nav({ visibility }: { visibility: SectionVisibility }) {
+  const navLinks = [
+    { href: '/', label: 'Home' },
+    ...(visibility.media ? [{ href: '/media', label: 'Media' }] : []),
+    ...(visibility.shows ? [{ href: '/shows', label: 'Shows' }] : []),
+    ...(visibility.merch ? [{ href: '/merch', label: 'Merch' }] : []),
+    { href: '/about', label: 'About' },
+  ]
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)

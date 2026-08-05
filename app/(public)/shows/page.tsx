@@ -1,6 +1,8 @@
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { MapPin, ExternalLink } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
+import { getVisibility } from '@/lib/visibility'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -49,6 +51,9 @@ function formatShowDate(dateStr: string) {
 }
 
 export default async function ShowsPage() {
+  const visibility = await getVisibility()
+  if (!visibility.shows) notFound()
+
   const [shows, content] = await Promise.all([getShows(), getSiteContent()])
   const now = new Date()
   const upcoming = shows.filter(s => new Date(s.datetime) > now)

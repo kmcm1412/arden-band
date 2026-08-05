@@ -1,4 +1,6 @@
+import { notFound } from 'next/navigation'
 import { adminDb } from '@/lib/firebase/admin'
+import { getVisibility } from '@/lib/visibility'
 import LiteYouTube from '@/components/LiteYouTube'
 
 export const dynamic = 'force-dynamic'
@@ -34,6 +36,9 @@ async function getVideos(): Promise<Video[]> {
 }
 
 export default async function MediaPage() {
+  const visibility = await getVisibility()
+  if (!visibility.media) notFound()
+
   const [videos, content] = await Promise.all([getVideos(), getSiteContent()])
   const youtubeUrl = content.youtubeUrl || 'https://youtube.com/@ardenjams'
   const youtubeHandle = content.youtubeHandle || '@ardenjams'
