@@ -3,21 +3,13 @@ import { notFound } from 'next/navigation'
 import { ShoppingBag } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
+import { getSiteContent } from '@/lib/site-content'
 import type { MerchItem } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Merch — Arden',
   description: 'Arden band merch — tees, caps, and more. Available at shows and by direct order.',
-}
-
-async function getSiteContent() {
-  try {
-    const doc = await adminDb.collection('siteContent').doc('home').get()
-    return doc.exists ? (doc.data() as Record<string, string>) : {}
-  } catch {
-    return {}
-  }
 }
 
 async function getMerch(): Promise<MerchItem[]> {

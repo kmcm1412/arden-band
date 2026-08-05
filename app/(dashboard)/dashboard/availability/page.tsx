@@ -97,6 +97,14 @@ export default function AvailabilityPage() {
   }, [selectedDate])
 
   const fetchAvailability = async () => {
+    try {
+      await fetchAvailabilityInner()
+    } catch (err) {
+      console.error('Failed to load availability:', err)
+    }
+  }
+
+  const fetchAvailabilityInner = async () => {
     const snap = await getDocs(collection(db, 'availabilities'))
     const agg: Record<string, { name: string; entries: AvailabilityEntry[] }> = {}
     snap.forEach(docSnap => {

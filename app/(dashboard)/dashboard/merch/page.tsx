@@ -10,6 +10,7 @@ import { Plus, Pencil, Trash2, Upload, ImageIcon, Eye, EyeOff } from 'lucide-rea
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 import { useAuth } from '@/lib/auth/context'
 import { logActivity } from '@/lib/activity'
+import { compressImage } from '@/lib/image'
 
 const EMPTY_ITEM: Omit<MerchItem, 'id'> = {
   name: '',
@@ -21,27 +22,6 @@ const EMPTY_ITEM: Omit<MerchItem, 'id'> = {
 }
 
 const CATEGORIES = ['Apparel', 'Accessories', 'Music', 'Other']
-
-function compressImage(file: File, maxSize: number): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      let w = img.width, h = img.height
-      if (w > maxSize || h > maxSize) {
-        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize }
-        else { w = Math.round(w * maxSize / h); h = maxSize }
-      }
-      canvas.width = w
-      canvas.height = h
-      const ctx = canvas.getContext('2d')!
-      ctx.drawImage(img, 0, 0, w, h)
-      resolve(canvas.toDataURL('image/jpeg', 0.8))
-    }
-    img.onerror = () => reject(new Error('Failed to load image'))
-    img.src = URL.createObjectURL(file)
-  })
-}
 
 function MerchPageContent() {
   const { user } = useAuth()

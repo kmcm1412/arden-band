@@ -12,7 +12,6 @@ import { formatDateTime } from '@/lib/utils'
 import { logActivity } from '@/lib/activity'
 
 const EMPTY_SHOW: Omit<Show, 'id'> = {
-  title: '',
   venue: '',
   location: '',
   datetime: '',
@@ -30,13 +29,20 @@ export default function ShowsPage() {
   const [editing, setEditing] = useState<Show | null>(null)
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState<Omit<Show, 'id'>>(EMPTY_SHOW)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => { fetchShows() }, [])
 
   const fetchShows = async () => {
-    const q = query(collection(db, 'shows'), orderBy('datetime', 'asc'))
-    const snap = await getDocs(q)
-    setShows(snap.docs.map(d => ({ id: d.id, ...d.data() } as Show)))
+    try {
+      const q = query(collection(db, 'shows'), orderBy('datetime', 'asc'))
+      const snap = await getDocs(q)
+      setShows(snap.docs.map(d => ({ id: d.id, ...d.data() } as Show)))
+      setLoadError('')
+    } catch (err) {
+      console.error('Failed to load shows:', err)
+      setLoadError('Failed to load shows. Refresh to retry.')
+    }
   }
 
   const handleSave = async () => {
@@ -64,7 +70,9 @@ export default function ShowsPage() {
 
   const startEdit = (show: Show) => {
     setEditing(show)
-    setForm({ ...show })
+    // Strip the id — it's the doc key, not document data
+    const { id: _id, ...data } = show
+    setForm(data)
     setCreating(false)
   }
 
@@ -168,6 +176,12 @@ export default function ShowsPage() {
               <X size={14} /> Cancel
             </button>
           </div>
+        </div>
+      )}
+
+      {loadError && (
+        <div className="mb-4 p-4 bg-red-900/20 border border-red-900 text-red-400 text-sm">
+          {loadError}
         </div>
       )}
 

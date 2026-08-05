@@ -1,34 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { verifyAdmin } from '@/lib/auth/verify-admin'
 
 export const dynamic = 'force-dynamic'
 
-async function verifyAdmin(req: NextRequest) {
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader?.startsWith('Bearer ')) throw new Error('Unauthorized')
-  const token = authHeader.slice(7)
-  const decoded = await adminAuth.verifyIdToken(token)
-  const membership = await adminDb.collection('memberships').doc(decoded.uid).get()
-  if (!membership.exists || membership.data()?.role !== 'admin' || !membership.data()?.active) {
-    throw new Error('Forbidden')
-  }
-  return decoded
+function authErrorResponse(err: unknown) {
+  const msg = err instanceof Error ? err.message : 'Unauthorized'
+  if (msg === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 }
 
 export async function GET(req: NextRequest) {
   try {
     await verifyAdmin(req)
+  } catch (err) {
+    return authErrorResponse(err)
+  }
+  try {
     const snapshot = await adminDb.collection('memberships').get()
     const members = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }))
     return NextResponse.json({ members })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: err.message === 'Forbidden' ? 403 : 401 })
+  } catch (err) {
+    console.error('Members GET error:', err)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await verifyAdmin(req)
+  } catch (err) {
+    return authErrorResponse(err)
+  }
+  try {
     const body = await req.json()
     const role = body.role
     // Normalize email — Firebase ID tokens carry lowercase emails, so invitations
@@ -64,18 +68,29 @@ export async function POST(req: NextRequest) {
     }, { merge: true })
 
     return NextResponse.json({ ok: true })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err) {
+    console.error('Members POST error:', err)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
 
 export async function PATCH(req: NextRequest) {
+  let decoded
   try {
-    await verifyAdmin(req)
+    decoded = await verifyAdmin(req)
+  } catch (err) {
+    return authErrorResponse(err)
+  }
+  try {
     const body = await req.json()
     const { uid, active, role } = body
 
     if (!uid) return NextResponse.json({ error: 'uid required' }, { status: 400 })
+
+    // Admins can't demote or deactivate themselves — prevents accidental lockout
+    if (uid === decoded.uid) {
+      return NextResponse.json({ error: "You can't change your own membership. Ask another admin." }, { status: 400 })
+    }
 
     const update: Record<string, unknown> = {}
     if (typeof active === 'boolean') update.active = active
@@ -83,7 +98,8 @@ export async function PATCH(req: NextRequest) {
 
     await adminDb.collection('memberships').doc(uid).update(update)
     return NextResponse.json({ ok: true })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err) {
+    console.error('Members PATCH error:', err)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

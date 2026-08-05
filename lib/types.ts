@@ -12,7 +12,8 @@ export interface Membership {
 
 export interface Show {
   id?: string
-  title: string
+  /** Optional label; public pages display venue instead */
+  title?: string
   venue: string
   location: string
   datetime: string

@@ -3,20 +3,12 @@ import { notFound } from 'next/navigation'
 import { MapPin, ExternalLink } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
+import { getSiteContent } from '@/lib/site-content'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Shows — Arden',
   description: 'Upcoming Arden shows on Long Island and beyond — dates, venues, and tickets.',
-}
-
-async function getSiteContent() {
-  try {
-    const doc = await adminDb.collection('siteContent').doc('home').get()
-    return doc.exists ? (doc.data() as Record<string, string>) : {}
-  } catch {
-    return {}
-  }
 }
 
 async function getShows() {

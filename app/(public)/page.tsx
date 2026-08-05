@@ -4,6 +4,7 @@ import { ArrowRight, ChevronDown } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
 import { getMergedVideos } from '@/lib/youtube'
+import { getSiteContent } from '@/lib/site-content'
 import SubscribeForm from '@/components/SubscribeForm'
 import LiteYouTube from '@/components/LiteYouTube'
 import HeroParallax from '@/components/HeroParallax'
@@ -11,20 +12,15 @@ import { SoundCloudIcon, YouTubeIcon, InstagramIcon } from '@/components/BrandIc
 
 export const dynamic = 'force-dynamic'
 
-async function getSiteContent() {
-  try {
-    const doc = await adminDb.collection('siteContent').doc('home').get()
-    return doc.exists ? (doc.data() as Record<string, string>) : {}
-  } catch {
-    return {}
-  }
-}
-
-
 async function getMerchTeaser(limit = 4) {
   try {
-    const snap = await adminDb.collection('merch').orderBy('createdAt', 'desc').limit(limit).get()
-    return snap.docs.map(d => ({ id: d.id, ...(d.data() as { name: string; price: number; imageUrl?: string }) }))
+    // Over-fetch then filter: only available items belong on the homepage,
+    // and an availability where-clause would need a composite index
+    const snap = await adminDb.collection('merch').orderBy('createdAt', 'desc').limit(limit * 3).get()
+    return snap.docs
+      .map(d => ({ id: d.id, ...(d.data() as { name: string; price: number; imageUrl?: string; available?: boolean }) }))
+      .filter(item => item.available !== false)
+      .slice(0, limit)
   } catch {
     return []
   }

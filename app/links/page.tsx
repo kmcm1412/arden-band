@@ -1,21 +1,12 @@
 import Link from 'next/link'
-import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
+import { getSiteContent } from '@/lib/site-content'
 import { SoundCloudIcon, YouTubeIcon, InstagramIcon } from '@/components/BrandIcons'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Arden — Links',
   description: 'Listen, watch, and follow Arden — Long Island jam band.',
-}
-
-async function getSiteContent() {
-  try {
-    const doc = await adminDb.collection('siteContent').doc('home').get()
-    return doc.exists ? (doc.data() as Record<string, string>) : {}
-  } catch {
-    return {}
-  }
 }
 
 interface BioLink {

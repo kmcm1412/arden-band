@@ -1,22 +1,13 @@
 import { notFound } from 'next/navigation'
-import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
 import { getMergedVideos } from '@/lib/youtube'
+import { getSiteContent } from '@/lib/site-content'
 import LiteYouTube from '@/components/LiteYouTube'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Media — Arden',
   description: 'Watch Arden live — full sets, jams, and sessions from the Long Island jam band.',
-}
-
-async function getSiteContent() {
-  try {
-    const doc = await adminDb.collection('siteContent').doc('home').get()
-    return doc.exists ? (doc.data() as Record<string, string>) : {}
-  } catch {
-    return {}
-  }
 }
 
 export default async function MediaPage() {

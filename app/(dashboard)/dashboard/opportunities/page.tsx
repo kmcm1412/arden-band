@@ -50,8 +50,12 @@ export default function OpportunitiesPage() {
   useEffect(() => { fetchOpportunities() }, [])
 
   const fetchOpportunities = async () => {
-    const snap = await getDocs(collection(db, 'opportunities'))
-    setOpportunities(snap.docs.map(d => ({ id: d.id, ...d.data() } as Opportunity)))
+    try {
+      const snap = await getDocs(collection(db, 'opportunities'))
+      setOpportunities(snap.docs.map(d => ({ id: d.id, ...d.data() } as Opportunity)))
+    } catch (err) {
+      console.error('Failed to load opportunities:', err)
+    }
   }
 
   const handleCreate = async () => {

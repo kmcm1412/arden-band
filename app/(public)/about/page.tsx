@@ -1,20 +1,11 @@
 import { Camera, Play } from 'lucide-react'
-import { adminDb } from '@/lib/firebase/admin'
+import { getSiteContent } from '@/lib/site-content'
 import ContactForm from '@/components/ContactForm'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'About — Arden',
   description: 'Meet Arden — a genre-blending Long Island jam band. The story, the members, and how to get in touch.',
-}
-
-async function getSiteContent() {
-  try {
-    const doc = await adminDb.collection('siteContent').doc('home').get()
-    return doc.exists ? (doc.data() as Record<string, string>) : {}
-  } catch {
-    return {}
-  }
 }
 
 export default async function AboutPage() {

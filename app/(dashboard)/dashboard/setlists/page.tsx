@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase/client'
 import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore'
 import { SetList, SetListSong } from '@/lib/types'
 import { useAuth } from '@/lib/auth/context'
-import { Plus, Trash2, GripVertical, Check, X } from 'lucide-react'
+import { Plus, Trash2, Check, X } from 'lucide-react'
 
 function genId() {
   return Math.random().toString(36).slice(2)
@@ -23,10 +23,14 @@ export default function SetlistsPage() {
   useEffect(() => { fetchSetlists() }, [])
 
   const fetchSetlists = async () => {
-    const snap = await getDocs(collection(db, 'setlists'))
-    const lists = snap.docs.map(d => ({ id: d.id, ...d.data() } as SetList))
-    setSetlists(lists)
-    if (lists.length > 0 && !selected) setSelected(lists[0])
+    try {
+      const snap = await getDocs(collection(db, 'setlists'))
+      const lists = snap.docs.map(d => ({ id: d.id, ...d.data() } as SetList))
+      setSetlists(lists)
+      if (lists.length > 0 && !selected) setSelected(lists[0])
+    } catch (err) {
+      console.error('Failed to load setlists:', err)
+    }
   }
 
   const createSetlist = async () => {
@@ -158,7 +162,6 @@ export default function SetlistsPage() {
                 {(selected.songs || []).map((song, i) => (
                   <div key={song.id} className="flex items-center gap-3 p-3 bg-arden-surface border border-arden-border group">
                     <span className="text-xs font-mono text-arden-subtext w-5">{i + 1}</span>
-                    <GripVertical size={14} className="text-arden-border" />
                     <span className="flex-1 text-sm text-arden-text">{song.title}</span>
                     {song.key && <span className="text-xs text-arden-subtext border border-arden-border px-2 py-0.5">{song.key}</span>}
                     {isAdmin && (

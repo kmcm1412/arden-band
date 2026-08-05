@@ -1,16 +1,7 @@
 import Link from 'next/link'
-import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
+import { getSiteContent } from '@/lib/site-content'
 import { SoundCloudIcon, YouTubeIcon, InstagramIcon } from '@/components/BrandIcons'
-
-async function getSiteContent() {
-  try {
-    const doc = await adminDb.collection('siteContent').doc('home').get()
-    return doc.exists ? (doc.data() as Record<string, string>) : {}
-  } catch {
-    return {}
-  }
-}
 
 export default async function Footer() {
   const [content, visibility] = await Promise.all([getSiteContent(), getVisibility()])

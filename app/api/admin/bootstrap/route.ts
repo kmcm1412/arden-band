@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'crypto'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 
 export const dynamic = 'force-dynamic'
@@ -14,7 +15,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    if (body.secret !== secret) {
+    const provided = Buffer.from(String(body.secret || ''))
+    const expected = Buffer.from(secret)
+    if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
       return NextResponse.json({ error: 'Invalid secret' }, { status: 403 })
     }
 

@@ -57,24 +57,36 @@ function AccessPageContent() {
   }
 
   const toggleActive = async (uid: string, active: boolean) => {
+    setError('')
     const token = await user?.getIdToken()
-    await fetch('/api/admin/members', {
+    const res = await fetch('/api/admin/members', {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ uid, active }),
     })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(data.error || 'Failed to update member.')
+      return
+    }
     const email = members.find(m => m.uid === uid)?.email || uid
     logActivity(user, active ? 'reactivated member' : 'deactivated member', email)
     fetchMembers()
   }
 
   const changeRole = async (uid: string, role: string) => {
+    setError('')
     const token = await user?.getIdToken()
-    await fetch('/api/admin/members', {
+    const res = await fetch('/api/admin/members', {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ uid, role }),
     })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(data.error || 'Failed to update member.')
+      return
+    }
     const email = members.find(m => m.uid === uid)?.email || uid
     logActivity(user, 'changed member role', `${email} → ${role}`)
     fetchMembers()
@@ -99,6 +111,12 @@ function AccessPageContent() {
       {info && (
         <div className="mb-4 p-4 bg-arden-surface border border-green-800 text-xs text-green-400 leading-relaxed">
           {info}
+        </div>
+      )}
+
+      {error && !adding && (
+        <div className="mb-4 p-4 bg-red-900/20 border border-red-900 text-xs text-red-400 leading-relaxed">
+          {error}
         </div>
       )}
 

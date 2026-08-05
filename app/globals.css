@@ -64,15 +64,6 @@
   }
 }
 
-@keyframes kenburns {
-  from {
-    transform: scale(1);
-  }
-  to {
-    transform: scale(1.08);
-  }
-}
-
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -96,10 +87,6 @@
   }
 }
 
-.animate-kenburns {
-  animation: kenburns 25s ease-out forwards;
-}
-
 .animate-scroll-cue {
   animation: scrollCue 2s ease-in-out infinite;
 }
@@ -109,7 +96,6 @@
     opacity: 1;
     animation: none;
   }
-  .animate-kenburns,
   .animate-scroll-cue {
     animation: none;
   }

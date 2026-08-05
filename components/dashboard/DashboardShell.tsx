@@ -66,7 +66,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     return pathname.startsWith(href)
   }
 
-  const SidebarContent = () => (
+  // Plain JSX value (not a nested component) so React doesn't remount the
+  // sidebar tree on every shell re-render
+  const sidebarContent = (
     <div className="flex flex-col h-full">
       <div className="px-6 py-5 border-b border-arden-border">
         <Link href="/" className="font-display text-lg font-bold tracking-widest text-arden-white hover:text-arden-accent transition-colors">
@@ -152,7 +154,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     <div className="flex h-screen bg-arden-black overflow-hidden">
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col w-56 bg-arden-dark border-r border-arden-border flex-shrink-0">
-        <SidebarContent />
+        {sidebarContent}
       </aside>
 
       {/* Mobile sidebar overlay */}
@@ -160,7 +162,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
           <aside className="relative w-56 bg-arden-dark border-r border-arden-border flex flex-col">
-            <SidebarContent />
+            {sidebarContent}
           </aside>
         </div>
       )}
