@@ -17,6 +17,8 @@ export interface Show {
   location: string
   datetime: string
   ticketLink?: string
+  /** Free-text ticketing instructions (e.g. "Venmo $15 to @arden-band with your name + ticket count") */
+  ticketInfo?: string
   notes?: string
   status: 'confirmed' | 'pending' | 'cancelled'
   isPublic: boolean

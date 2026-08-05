@@ -8,6 +8,8 @@ import {
 import { MerchItem } from '@/lib/types'
 import { Plus, Pencil, Trash2, Upload, ImageIcon, Eye, EyeOff } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
+import { useAuth } from '@/lib/auth/context'
+import { logActivity } from '@/lib/activity'
 
 const EMPTY_ITEM: Omit<MerchItem, 'id'> = {
   name: '',
@@ -42,6 +44,7 @@ function compressImage(file: File, maxSize: number): Promise<string> {
 }
 
 function MerchPageContent() {
+  const { user } = useAuth()
   const [items, setItems] = useState<MerchItem[]>([])
   const [editing, setEditing] = useState<MerchItem | null>(null)
   const [creating, setCreating] = useState(false)
@@ -75,8 +78,10 @@ function MerchPageContent() {
       const payload = { ...form, price: Number(form.price) || 0 }
       if (editing?.id) {
         await updateDoc(doc(db, 'merch', editing.id), payload)
+        logActivity(user, 'edited merch item', form.name)
       } else {
         await addDoc(collection(db, 'merch'), { ...payload, createdAt: new Date().toISOString() })
+        logActivity(user, 'added merch item', form.name)
       }
       setEditing(null)
       setCreating(false)
@@ -92,8 +97,10 @@ function MerchPageContent() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this merch item?')) return
+    const name = items.find(i => i.id === id)?.name || id
     try {
       await deleteDoc(doc(db, 'merch', id))
+      logActivity(user, 'deleted merch item', name)
       fetchItems()
     } catch (err) {
       console.error('Failed to delete merch item:', err)
@@ -105,6 +112,7 @@ function MerchPageContent() {
     if (!item.id) return
     try {
       await updateDoc(doc(db, 'merch', item.id), { available: !item.available })
+      logActivity(user, 'toggled merch availability', `${item.name} → ${!item.available ? 'available' : 'sold out'}`)
       fetchItems()
     } catch (err) {
       console.error('Failed to toggle availability:', err)

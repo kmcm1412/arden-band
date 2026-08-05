@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
+import { getMergedVideos } from '@/lib/youtube'
 import LiteYouTube from '@/components/LiteYouTube'
 
 export const dynamic = 'force-dynamic'
@@ -18,28 +19,11 @@ async function getSiteContent() {
   }
 }
 
-interface Video {
-  id: string
-  youtubeId: string
-  title: string
-  description: string
-  featured: boolean
-}
-
-async function getVideos(): Promise<Video[]> {
-  try {
-    const snap = await adminDb.collection('media').orderBy('createdAt', 'desc').get()
-    return snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Video, 'id'>) }))
-  } catch {
-    return []
-  }
-}
-
 export default async function MediaPage() {
   const visibility = await getVisibility()
   if (!visibility.media) notFound()
 
-  const [videos, content] = await Promise.all([getVideos(), getSiteContent()])
+  const [videos, content] = await Promise.all([getMergedVideos(), getSiteContent()])
   const youtubeUrl = content.youtubeUrl || 'https://youtube.com/@ardenjams'
   const youtubeHandle = content.youtubeHandle || '@ardenjams'
   const featured = videos.find(v => v.featured)
@@ -81,7 +65,7 @@ export default async function MediaPage() {
         {rest.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {rest.map((video) => (
-              <div key={video.id} className="group">
+              <div key={video.youtubeId} className="group">
                 <div className="relative aspect-video bg-arden-surface overflow-hidden mb-3">
                   <LiteYouTube videoId={video.youtubeId} title={video.title} />
                 </div>

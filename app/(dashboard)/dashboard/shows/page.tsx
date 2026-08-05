@@ -9,6 +9,7 @@ import {
 import { Show } from '@/lib/types'
 import { Plus, Pencil, Trash2, ExternalLink, Check, X } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
+import { logActivity } from '@/lib/activity'
 
 const EMPTY_SHOW: Omit<Show, 'id'> = {
   title: '',
@@ -16,13 +17,14 @@ const EMPTY_SHOW: Omit<Show, 'id'> = {
   location: '',
   datetime: '',
   ticketLink: '',
+  ticketInfo: '',
   notes: '',
   status: 'pending',
   isPublic: true,
 }
 
 export default function ShowsPage() {
-  const { membership } = useAuth()
+  const { user, membership } = useAuth()
   const isAdmin = membership?.role === 'admin'
   const [shows, setShows] = useState<Show[]>([])
   const [editing, setEditing] = useState<Show | null>(null)
@@ -41,8 +43,10 @@ export default function ShowsPage() {
     if (!form.venue || !form.datetime) return
     if (editing?.id) {
       await updateDoc(doc(db, 'shows', editing.id), { ...form })
+      logActivity(user, 'edited show', `${form.venue} · ${form.datetime}`)
     } else {
       await addDoc(collection(db, 'shows'), { ...form, createdAt: new Date().toISOString() })
+      logActivity(user, 'added show', `${form.venue} · ${form.datetime}`)
     }
     setEditing(null)
     setCreating(false)
@@ -52,7 +56,9 @@ export default function ShowsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this show?')) return
+    const venue = shows.find(s => s.id === id)?.venue || id
     await deleteDoc(doc(db, 'shows', id))
+    logActivity(user, 'deleted show', venue)
     fetchShows()
   }
 
@@ -134,7 +140,19 @@ export default function ShowsPage() {
             </div>
           </div>
           <div className="mt-4">
-            <label className="text-xs tracking-widest uppercase text-arden-subtext block mb-1">Notes</label>
+            <label className="text-xs tracking-widest uppercase text-arden-subtext block mb-1">
+              Ticket Instructions <span className="normal-case">(shown to fans — use when tickets aren&apos;t a simple link, e.g. &quot;Venmo $15 to @arden-band and list your name + number of tickets in the description&quot;)</span>
+            </label>
+            <textarea
+              value={form.ticketInfo || ''}
+              onChange={e => setForm(f => ({ ...f, ticketInfo: e.target.value }))}
+              rows={2}
+              placeholder="Leave blank if the ticket link covers it"
+              className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent resize-none"
+            />
+          </div>
+          <div className="mt-4">
+            <label className="text-xs tracking-widest uppercase text-arden-subtext block mb-1">Notes <span className="normal-case">(internal — not shown publicly)</span></label>
             <textarea
               value={form.notes || ''}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}

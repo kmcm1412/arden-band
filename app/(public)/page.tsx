@@ -3,8 +3,10 @@ import Link from 'next/link'
 import { ArrowRight, ChevronDown } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
+import { getMergedVideos } from '@/lib/youtube'
 import SubscribeForm from '@/components/SubscribeForm'
 import LiteYouTube from '@/components/LiteYouTube'
+import HeroParallax from '@/components/HeroParallax'
 import { SoundCloudIcon, YouTubeIcon, InstagramIcon } from '@/components/BrandIcons'
 
 export const dynamic = 'force-dynamic'
@@ -18,21 +20,6 @@ async function getSiteContent() {
   }
 }
 
-interface HomeVideo {
-  id: string
-  youtubeId: string
-  title: string
-  featured?: boolean
-}
-
-async function getVideos(): Promise<HomeVideo[]> {
-  try {
-    const snap = await adminDb.collection('media').orderBy('createdAt', 'desc').limit(8).get()
-    return snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<HomeVideo, 'id'>) }))
-  } catch {
-    return []
-  }
-}
 
 async function getMerchTeaser(limit = 4) {
   try {
@@ -62,7 +49,7 @@ export default async function HomePage() {
   const [content, upcomingShows, videos, merchItems, visibility] = await Promise.all([
     getSiteContent(),
     getUpcomingShows(),
-    getVideos(),
+    getMergedVideos(),
     getMerchTeaser(),
     getVisibility(),
   ])
@@ -79,7 +66,7 @@ export default async function HomePage() {
   const soundcloudUrl = content.soundcloudUrl || ''
 
   const featuredVideo = videos.find(v => v.featured) || videos[0] || null
-  const recentVideos = videos.filter(v => v.id !== featuredVideo?.id).slice(0, 3)
+  const recentVideos = videos.filter(v => v.youtubeId !== featuredVideo?.youtubeId).slice(0, 3)
 
   const nextShow = upcomingShows[0]
   const nextShowLabel = nextShow
@@ -113,13 +100,7 @@ export default async function HomePage() {
       {/* HERO — full-bleed live shot; the photo carries the ARDEN lettering */}
       <section className="relative h-[100svh] min-h-[560px] flex items-end pb-16 md:pb-20 px-6">
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <img
-            src="/hero-banner.jpeg"
-            alt="Arden performing live — the band on stage under neon ARDEN lettering"
-            fetchPriority="high"
-            className="absolute inset-0 w-full h-full object-cover animate-kenburns"
-            style={{ objectPosition: 'center 42%' }}
-          />
+          <HeroParallax />
           {/* Top vignette — for nav readability */}
           <div
             className="absolute inset-x-0 top-0 h-28"
@@ -136,21 +117,11 @@ export default async function HomePage() {
 
         <div className="relative z-10 max-w-7xl mx-auto w-full">
           <div className="max-w-3xl">
-            <div className="hero-enter flex flex-wrap items-center gap-4 mb-4">
-              <p className="section-label">Est. {estYear}</p>
-              {nextShow && (
-                <Link
-                  href="/shows"
-                  className="inline-flex items-center gap-2 border border-arden-accent/40 bg-arden-black/40 backdrop-blur-sm px-3 py-1.5 text-xs tracking-wider uppercase text-arden-accent hover:border-arden-accent hover:bg-arden-black/70 transition-all"
-                >
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-arden-accent opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-arden-accent" />
-                  </span>
-                  Next show · {nextShowLabel} <ArrowRight size={12} />
-                </Link>
-              )}
-            </div>
+            <p
+              className="hero-enter text-arden-accent font-semibold uppercase tracking-[0.35em] text-sm md:text-lg mb-3"
+            >
+              Est. {estYear}
+            </p>
             <h1
               className="hero-enter heading-display text-[clamp(2.75rem,7vw,5rem)] text-arden-white mb-4 leading-none"
               style={{ letterSpacing: '-0.02em', animationDelay: '0.1s' }}
@@ -163,6 +134,22 @@ export default async function HomePage() {
             >
               {heroTagline}
             </p>
+
+            {nextShow && (
+              <div className="hero-enter mb-6" style={{ animationDelay: '0.25s' }}>
+                <Link
+                  href="/shows"
+                  className="group inline-flex items-center gap-3 border border-arden-accent bg-arden-black/75 backdrop-blur-sm px-5 py-3 text-sm font-semibold tracking-wider uppercase text-arden-accent transition-all duration-200 hover:bg-arden-accent hover:text-arden-black focus-visible:bg-arden-accent focus-visible:text-arden-black active:scale-[0.98]"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-current" />
+                  </span>
+                  Next show · {nextShowLabel}
+                  <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+                </Link>
+              </div>
+            )}
 
             <div className="hero-enter flex flex-wrap items-center gap-4 mb-6" style={{ animationDelay: '0.3s' }}>
               {visibility.media && (
@@ -249,7 +236,7 @@ export default async function HomePage() {
             {recentVideos.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                 {recentVideos.map(v => (
-                  <div key={v.id}>
+                  <div key={v.youtubeId}>
                     <div className="relative aspect-video bg-arden-surface overflow-hidden">
                       <LiteYouTube videoId={v.youtubeId} title={v.title} />
                     </div>

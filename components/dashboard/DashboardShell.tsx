@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { signOut } from 'firebase/auth'
-import { auth } from '@/lib/firebase/client'
+import { collection, query, where, onSnapshot } from 'firebase/firestore'
+import { auth, db } from '@/lib/firebase/client'
 import { useAuth } from '@/lib/auth/context'
 import {
   Calendar,
+  History,
   Music,
   ListMusic,
   LayoutDashboard,
@@ -30,6 +32,7 @@ const navItems = [
   { href: '/dashboard/content', label: 'Content', icon: LayoutDashboard },
   { href: '/dashboard/opportunities', label: 'Opportunities', icon: Megaphone },
   { href: '/dashboard/messages', label: 'Messages', icon: Mail },
+  { href: '/dashboard/activity', label: 'Activity', icon: History },
 ]
 
 const adminItems = [
@@ -43,6 +46,15 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const router = useRouter()
   const { user, membership } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [unreadMessages, setUnreadMessages] = useState(0)
+
+  useEffect(() => {
+    if (!membership?.active) return
+    // Live count — updates instantly across every open dashboard
+    const q = query(collection(db, 'contactMessages'), where('read', '==', false))
+    const unsub = onSnapshot(q, snap => setUnreadMessages(snap.size), () => {})
+    return unsub
+  }, [membership])
 
   const handleSignOut = async () => {
     await signOut(auth)
@@ -78,6 +90,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           >
             <item.icon size={16} />
             {item.label}
+            {item.href === '/dashboard/messages' && unreadMessages > 0 && (
+              <span className="ml-auto bg-arden-accent text-arden-black text-[10px] font-bold px-1.5 py-0.5 leading-none rounded-full">
+                {unreadMessages}
+              </span>
+            )}
           </Link>
         ))}
 

@@ -29,6 +29,7 @@ async function getShows() {
         venue: string
         location: string
         ticketLink: string | null
+        ticketInfo: string | null
         status: string
         isPublic: boolean
       })
@@ -113,33 +114,42 @@ export default async function ShowsPage() {
                     </span>
                   </div>
 
-                  <div className="flex-1 px-6 py-5 flex items-center justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className="text-lg font-medium text-arden-white">{show.venue}</h3>
-                        {show.status === 'pending' && (
-                          <span className="text-xs tracking-wider uppercase text-arden-subtext border border-arden-border px-2 py-0.5">
-                            TBC
-                          </span>
-                        )}
+                  <div className="flex-1 px-6 py-5 flex flex-col gap-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-3 mb-1">
+                          <h3 className="text-lg font-medium text-arden-white">{show.venue}</h3>
+                          {show.status === 'pending' && (
+                            <span className="text-xs tracking-wider uppercase text-arden-subtext border border-arden-border px-2 py-0.5">
+                              TBC
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-arden-subtext text-sm">
+                          <MapPin size={12} />
+                          <span>{show.location}</span>
+                          <span className="text-arden-border">·</span>
+                          <span>{d.time}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-arden-subtext text-sm">
-                        <MapPin size={12} />
-                        <span>{show.location}</span>
-                        <span className="text-arden-border">·</span>
-                        <span>{d.time}</span>
-                      </div>
+
+                      {show.ticketLink && (
+                        <a
+                          href={show.ticketLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-primary text-xs py-2 px-5 flex-shrink-0"
+                        >
+                          Tickets <ExternalLink size={12} />
+                        </a>
+                      )}
                     </div>
 
-                    {show.ticketLink && (
-                      <a
-                        href={show.ticketLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-primary text-xs py-2 px-5 flex-shrink-0"
-                      >
-                        Tickets <ExternalLink size={12} />
-                      </a>
+                    {show.ticketInfo && (
+                      <p className="text-sm text-arden-text bg-arden-black/40 border-l-2 border-arden-accent px-4 py-2.5 leading-relaxed">
+                        <span className="text-arden-accent text-xs tracking-widest uppercase mr-2">Tickets</span>
+                        {show.ticketInfo}
+                      </p>
                     )}
                   </div>
                 </div>

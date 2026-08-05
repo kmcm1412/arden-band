@@ -8,8 +8,11 @@ import {
 import { ContactMessage } from '@/lib/types'
 import { Mail, MailOpen, Trash2 } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
+import { useAuth } from '@/lib/auth/context'
+import { logActivity } from '@/lib/activity'
 
 function MessagesPageContent() {
+  const { user } = useAuth()
   const [messages, setMessages] = useState<ContactMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -37,6 +40,7 @@ function MessagesPageContent() {
       try {
         await updateDoc(doc(db, 'contactMessages', msg.id), { read: true })
         setMessages(ms => ms.map(m => (m.id === msg.id ? { ...m, read: true } : m)))
+        logActivity(user, 'read message', `from ${msg.name} (${msg.email})`)
       } catch (err) {
         console.error('Failed to mark read:', err)
       }
@@ -45,9 +49,11 @@ function MessagesPageContent() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this message?')) return
+    const msg = messages.find(m => m.id === id)
     try {
       await deleteDoc(doc(db, 'contactMessages', id))
       setMessages(ms => ms.filter(m => m.id !== id))
+      logActivity(user, 'deleted message', msg ? `from ${msg.name} (${msg.email})` : id)
     } catch (err) {
       console.error('Failed to delete message:', err)
       setError('Failed to delete.')

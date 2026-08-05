@@ -14,6 +14,7 @@ export default function Nav({ visibility }: { visibility: SectionVisibility }) {
     ...(visibility.shows ? [{ href: '/shows', label: 'Shows' }] : []),
     ...(visibility.merch ? [{ href: '/merch', label: 'Merch' }] : []),
     { href: '/about', label: 'About' },
+    { href: '/about#contact', label: 'Book Us' },
   ]
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)

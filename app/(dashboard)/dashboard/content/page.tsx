@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { db } from '@/lib/firebase/client'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore'
 import { Save, ExternalLink, Upload, ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
+import { useAuth } from '@/lib/auth/context'
+import { logActivity } from '@/lib/activity'
 
 interface SiteContent {
   // Homepage — Hero
@@ -80,6 +82,7 @@ const VISIBILITY_SECTIONS: { key: keyof Visibility; label: string; desc: string 
 ]
 
 function ContentPageContent() {
+  const { user } = useAuth()
   const [content, setContent] = useState<SiteContent>(DEFAULTS)
   const [visibility, setVisibility] = useState<Visibility>(VISIBILITY_DEFAULTS)
   const [togglingKey, setTogglingKey] = useState<string | null>(null)
@@ -88,30 +91,60 @@ function ContentPageContent() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [liveNote, setLiveNote] = useState('')
+  const [remoteContentPending, setRemoteContentPending] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const loadedRef = useRef(false)
 
   useEffect(() => {
-    Promise.all([
-      getDoc(doc(db, 'siteContent', 'home')).then(snap => {
-        if (snap.exists()) setContent({ ...DEFAULTS, ...(snap.data() as SiteContent) })
-      }),
-      getDoc(doc(db, 'siteContent', 'visibility')).then(snap => {
-        if (snap.exists()) setVisibility({ ...VISIBILITY_DEFAULTS, ...(snap.data() as Visibility) })
-      }),
-    ]).catch(err => {
+    getDoc(doc(db, 'siteContent', 'home')).then(snap => {
+      if (snap.exists()) setContent({ ...DEFAULTS, ...(snap.data() as SiteContent) })
+    }).catch(err => {
       console.error('Failed to load site content:', err)
       setError('Failed to load content. Check console for details.')
-    }).finally(() => setLoading(false))
+    }).finally(() => {
+      loadedRef.current = true
+      setLoading(false)
+    })
+
+    // Visibility toggles sync live across everyone's dashboards
+    const unsubVis = onSnapshot(doc(db, 'siteContent', 'visibility'), snap => {
+      if (snap.exists()) setVisibility({ ...VISIBILITY_DEFAULTS, ...(snap.data() as Visibility) })
+    })
+
+    // Text content changed elsewhere → offer a reload instead of clobbering edits
+    const unsubContent = onSnapshot(doc(db, 'siteContent', 'home'), snap => {
+      if (loadedRef.current && snap.exists() && !snap.metadata.hasPendingWrites) {
+        setRemoteContentPending(true)
+      }
+    })
+    return () => { unsubVis(); unsubContent() }
   }, [])
+
+  // Live "who did what" note from the newest activity entry by someone else
+  useEffect(() => {
+    if (!user) return
+    const q = query(collection(db, 'activityLog'), orderBy('at', 'desc'), limit(1))
+    const unsub = onSnapshot(q, snap => {
+      const d = snap.docs[0]?.data()
+      if (d && d.actorUid !== user.uid && Date.now() - new Date(d.at).getTime() < 20000) {
+        setLiveNote(`${d.actorName} ${d.action}: ${d.detail}`)
+        setTimeout(() => setLiveNote(''), 8000)
+      }
+    })
+    return unsub
+  }, [user])
 
   // Toggles save immediately — no "Save Changes" needed
   async function toggleSection(key: keyof Visibility) {
     const next = { ...visibility, [key]: !visibility[key] }
+    const label = VISIBILITY_SECTIONS.find(s => s.key === key)?.label || key
     setTogglingKey(key)
     setError('')
     try {
       await setDoc(doc(db, 'siteContent', 'visibility'), next)
       setVisibility(next)
+      logActivity(user, 'toggled section', `${label} → ${next[key] ? 'on' : 'off'}`)
     } catch (err) {
       console.error('Failed to update visibility:', err)
       setError(err instanceof Error ? err.message : 'Failed to update visibility.')
@@ -120,11 +153,19 @@ function ContentPageContent() {
     }
   }
 
+  async function reloadRemoteContent() {
+    const snap = await getDoc(doc(db, 'siteContent', 'home'))
+    if (snap.exists()) setContent({ ...DEFAULTS, ...(snap.data() as SiteContent) })
+    setRemoteContentPending(false)
+  }
+
   async function handleSave() {
     setSaving(true)
     setError('')
     try {
       await setDoc(doc(db, 'siteContent', 'home'), content)
+      setRemoteContentPending(false)
+      logActivity(user, 'edited site content', 'Saved public site text/images')
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err: unknown) {
@@ -202,6 +243,21 @@ function ContentPageContent() {
       {error && (
         <div className="mb-6 p-4 bg-red-900/20 border border-red-900 text-red-400 text-sm">
           {error}
+        </div>
+      )}
+
+      {liveNote && (
+        <div className="mb-6 p-4 bg-arden-surface border border-arden-accent/50 text-arden-accent text-sm animate-fade-in">
+          {liveNote}
+        </div>
+      )}
+
+      {remoteContentPending && (
+        <div className="mb-6 p-4 bg-arden-surface border border-arden-accent/50 text-sm flex items-center justify-between gap-4">
+          <span className="text-arden-text">Site text was updated by someone else since you opened this page.</span>
+          <button onClick={reloadRemoteContent} className="btn-ghost text-xs py-1.5 px-4 flex-shrink-0">
+            Load Latest
+          </button>
         </div>
       )}
 

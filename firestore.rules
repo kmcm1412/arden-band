@@ -105,6 +105,13 @@ service cloud.firestore {
       allow read, write: if false; // Admin SDK only
     }
 
+    // Activity log: members read + append entries as themselves; immutable
+    match /activityLog/{entryId} {
+      allow read: if isMember();
+      allow create: if isMember() && request.resource.data.actorUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
     // Deny everything else
     match /{document=**} {
       allow read, write: if false;

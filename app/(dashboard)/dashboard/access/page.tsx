@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth/context'
 import { Plus, Check, X, UserCheck, UserX } from 'lucide-react'
 import { Membership } from '@/lib/types'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
+import { logActivity } from '@/lib/activity'
 
 function AccessPageContent() {
   const { user } = useAuth()
@@ -46,6 +47,7 @@ function AccessPageContent() {
       if (data.pending) {
         setInfo(`Invitation saved for ${form.email}. They'll get access when they first sign in.`)
       }
+      logActivity(user, 'invited member', `${form.email} as ${form.role}`)
       fetchMembers()
     } catch {
       setError('Failed to add member')
@@ -61,6 +63,8 @@ function AccessPageContent() {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ uid, active }),
     })
+    const email = members.find(m => m.uid === uid)?.email || uid
+    logActivity(user, active ? 'reactivated member' : 'deactivated member', email)
     fetchMembers()
   }
 
@@ -71,6 +75,8 @@ function AccessPageContent() {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ uid, role }),
     })
+    const email = members.find(m => m.uid === uid)?.email || uid
+    logActivity(user, 'changed member role', `${email} → ${role}`)
     fetchMembers()
   }
 
