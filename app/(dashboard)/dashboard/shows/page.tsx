@@ -17,6 +17,8 @@ const EMPTY_SHOW: Omit<Show, 'id'> = {
   datetime: '',
   ticketLink: '',
   ticketInfo: '',
+  ticketPrice: 0,
+  ticketNamesRequired: false,
   notes: '',
   status: 'pending',
   isPublic: true,
@@ -158,6 +160,37 @@ export default function ShowsPage() {
               placeholder="Leave blank if the ticket link covers it"
               className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent resize-none"
             />
+          </div>
+          <div className="mt-4 p-4 bg-arden-dark border border-arden-border">
+            <p className="text-xs tracking-widest uppercase text-arden-accent mb-3">
+              Venmo Checkout <span className="text-arden-subtext normal-case tracking-normal">— fans pick a ticket count and get a prefilled Venmo payment to @ardenjams</span>
+            </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs tracking-widest uppercase text-arden-subtext block mb-1">
+                  Price per ticket ($) <span className="normal-case">(0 = no Venmo checkout)</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={form.ticketPrice || 0}
+                  onChange={e => setForm(f => ({ ...f, ticketPrice: parseFloat(e.target.value) || 0 }))}
+                  className="w-full bg-arden-black border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                />
+              </div>
+              <div className="flex items-end pb-2">
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-arden-text">
+                  <input
+                    type="checkbox"
+                    checked={form.ticketNamesRequired || false}
+                    onChange={e => setForm(f => ({ ...f, ticketNamesRequired: e.target.checked }))}
+                    className="accent-[#c8a96e]"
+                  />
+                  Ask for attendee names (added to the Venmo note)
+                </label>
+              </div>
+            </div>
           </div>
           <div className="mt-4">
             <label className="text-xs tracking-widest uppercase text-arden-subtext block mb-1">Notes <span className="normal-case">(internal — not shown publicly)</span></label>

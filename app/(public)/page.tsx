@@ -41,6 +41,92 @@ async function getUpcomingShows(limit = 3) {
   }
 }
 
+function HeroContent({
+  estYear,
+  heroTagline,
+  nextShow,
+  nextShowLabel,
+  visibility,
+  socials,
+}: {
+  estYear: string
+  heroTagline: string
+  nextShow: boolean
+  nextShowLabel: string
+  visibility: { media: boolean; shows: boolean }
+  socials: { href: string; label: string; icon: React.ReactNode }[]
+}) {
+  return (
+    <>
+      {/* Title lockup — Est. year sits big and gold on the baseline */}
+      <div className="hero-enter flex flex-wrap items-baseline gap-x-5 gap-y-1 mb-4">
+        <h1
+          className="heading-display text-[clamp(3rem,7vw,5rem)] text-arden-white leading-none"
+          style={{ letterSpacing: '-0.02em' }}
+        >
+          Arden
+        </h1>
+        <span className="flex items-baseline gap-3">
+          <span className="hidden sm:block w-10 h-px bg-arden-accent self-center" aria-hidden="true" />
+          <span className="font-display text-arden-accent font-bold uppercase tracking-[0.2em] text-xl md:text-2xl">
+            Est. {estYear}
+          </span>
+        </span>
+      </div>
+      <p
+        className="hero-enter text-arden-subtext text-base md:text-lg max-w-xl leading-relaxed mb-6"
+        style={{ animationDelay: '0.15s' }}
+      >
+        {heroTagline}
+      </p>
+
+      {nextShow && (
+        <div className="hero-enter mb-6" style={{ animationDelay: '0.25s' }}>
+          <Link
+            href="/shows"
+            className="group inline-flex items-center gap-3 border border-arden-accent bg-arden-black/75 backdrop-blur-sm px-5 py-3 text-sm font-semibold tracking-wider uppercase text-arden-accent transition-all duration-200 hover:bg-arden-accent hover:text-arden-black focus-visible:bg-arden-accent focus-visible:text-arden-black active:scale-[0.98]"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-current" />
+            </span>
+            Next show · {nextShowLabel}
+            <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+          </Link>
+        </div>
+      )}
+
+      <div className="hero-enter flex flex-wrap items-center gap-4 mb-6" style={{ animationDelay: '0.3s' }}>
+        {visibility.media && (
+          <Link href="/media" className="btn-primary">
+            Watch <ArrowRight size={16} />
+          </Link>
+        )}
+        {visibility.shows && (
+          <Link href="/shows" className="btn-ghost">
+            See Shows
+          </Link>
+        )}
+      </div>
+
+      <div className="hero-enter flex items-center gap-6" style={{ animationDelay: '0.4s' }}>
+        {socials.map(s => (
+          <a
+            key={s.label}
+            href={s.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors"
+          >
+            {s.icon}
+            <span className="text-xs tracking-widest uppercase">{s.label}</span>
+          </a>
+        ))}
+      </div>
+    </>
+  )
+}
+
 export default async function HomePage() {
   const [content, upcomingShows, videos, merchItems, visibility] = await Promise.all([
     getSiteContent(),
@@ -94,93 +180,72 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(bandJsonLd) }}
       />
 
-      {/* HERO — full-bleed live shot; the photo carries the ARDEN lettering */}
-      <section className="relative h-[100svh] min-h-[560px] flex items-end pb-16 md:pb-20 px-6">
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <HeroParallax />
-          {/* Top vignette — for nav readability */}
-          <div
-            className="absolute inset-x-0 top-0 h-28"
-            style={{ background: 'linear-gradient(to bottom, rgba(10,10,10,0.55), transparent)' }}
-          />
-          {/* Bottom fade — kept low so the photo stays the star */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: 'linear-gradient(to bottom, transparent 52%, rgba(10,10,10,0.45) 68%, rgba(10,10,10,0.82) 84%, #0a0a0a 97%)',
-            }}
-          />
-        </div>
-
-        <div className="relative z-10 max-w-7xl mx-auto w-full">
-          <div className="max-w-3xl">
-            <p
-              className="hero-enter text-arden-accent font-semibold uppercase tracking-[0.35em] text-sm md:text-lg mb-3"
-            >
-              Est. {estYear}
-            </p>
-            <h1
-              className="hero-enter heading-display text-[clamp(2.75rem,7vw,5rem)] text-arden-white mb-4 leading-none"
-              style={{ letterSpacing: '-0.02em', animationDelay: '0.1s' }}
-            >
-              Arden
-            </h1>
-            <p
-              className="hero-enter text-arden-subtext text-base md:text-lg max-w-xl leading-relaxed mb-6"
-              style={{ animationDelay: '0.2s' }}
-            >
-              {heroTagline}
-            </p>
-
-            {nextShow && (
-              <div className="hero-enter mb-6" style={{ animationDelay: '0.25s' }}>
-                <Link
-                  href="/shows"
-                  className="group inline-flex items-center gap-3 border border-arden-accent bg-arden-black/75 backdrop-blur-sm px-5 py-3 text-sm font-semibold tracking-wider uppercase text-arden-accent transition-all duration-200 hover:bg-arden-accent hover:text-arden-black focus-visible:bg-arden-accent focus-visible:text-arden-black active:scale-[0.98]"
-                >
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-current" />
-                  </span>
-                  Next show · {nextShowLabel}
-                  <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
-                </Link>
-              </div>
-            )}
-
-            <div className="hero-enter flex flex-wrap items-center gap-4 mb-6" style={{ animationDelay: '0.3s' }}>
-              {visibility.media && (
-                <Link href="/media" className="btn-primary">
-                  Watch <ArrowRight size={16} />
-                </Link>
-              )}
-              {visibility.shows && (
-                <Link href="/shows" className="btn-ghost">
-                  See Shows
-                </Link>
-              )}
-            </div>
-
-            <div className="hero-enter flex items-center gap-6" style={{ animationDelay: '0.4s' }}>
-              {socials.map(s => (
-                <a
-                  key={s.label}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors"
-                >
-                  {s.icon}
-                  <span className="text-xs tracking-widest uppercase">{s.label}</span>
-                </a>
-              ))}
-            </div>
+      {/* HERO — the photo carries the ARDEN lettering.
+          Mobile: full uncropped image, content below.
+          Desktop: overlay layout at ~78% viewport so the page starts sooner. */}
+      <section className="relative">
+        {/* ── Mobile ── */}
+        <div className="md:hidden">
+          <div className="relative">
+            <img
+              src="/hero-1280.jpg"
+              alt="Arden performing live — the band on stage under neon ARDEN lettering"
+              fetchPriority="high"
+              className="w-full h-auto"
+            />
+            {/* Blend the image bottom into the page background */}
+            <div
+              className="absolute inset-x-0 bottom-0 h-16"
+              style={{ background: 'linear-gradient(to bottom, transparent, #0a0a0a)' }}
+            />
+          </div>
+          <div className="px-6 pt-2 pb-12">
+            <HeroContent
+              estYear={estYear}
+              heroTagline={heroTagline}
+              nextShow={!!nextShow}
+              nextShowLabel={nextShowLabel}
+              visibility={visibility}
+              socials={socials}
+            />
           </div>
         </div>
 
-        {/* Scroll cue */}
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 hidden md:block">
-          <ChevronDown size={20} className="text-arden-subtext animate-scroll-cue" />
+        {/* ── Desktop ── */}
+        <div className="hidden md:flex relative h-[78svh] min-h-[560px] items-end pb-14 px-6">
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <HeroParallax />
+            {/* Top vignette — for nav readability */}
+            <div
+              className="absolute inset-x-0 top-0 h-28"
+              style={{ background: 'linear-gradient(to bottom, rgba(10,10,10,0.55), transparent)' }}
+            />
+            {/* Bottom fade — kept low so the photo stays the star */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(to bottom, transparent 48%, rgba(10,10,10,0.5) 64%, rgba(10,10,10,0.85) 82%, #0a0a0a 97%)',
+              }}
+            />
+          </div>
+
+          <div className="relative z-10 max-w-7xl mx-auto w-full">
+            <div className="max-w-3xl">
+              <HeroContent
+                estYear={estYear}
+                heroTagline={heroTagline}
+                nextShow={!!nextShow}
+                nextShowLabel={nextShowLabel}
+                visibility={visibility}
+                socials={socials}
+              />
+            </div>
+          </div>
+
+          {/* Scroll cue */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+            <ChevronDown size={20} className="text-arden-subtext animate-scroll-cue" />
+          </div>
         </div>
       </section>
 

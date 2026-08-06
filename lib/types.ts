@@ -20,6 +20,10 @@ export interface Show {
   ticketLink?: string
   /** Free-text ticketing instructions (e.g. "Venmo $15 to @arden-band with your name + ticket count") */
   ticketInfo?: string
+  /** Price per ticket in dollars — set > 0 to enable the Venmo checkout widget on the public shows page */
+  ticketPrice?: number
+  /** Whether the Venmo checkout asks buyers for attendee names to include in the payment note */
+  ticketNamesRequired?: boolean
   notes?: string
   status: 'confirmed' | 'pending' | 'cancelled'
   isPublic: boolean

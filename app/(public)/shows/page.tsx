@@ -4,6 +4,7 @@ import { MapPin, ExternalLink } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
 import { getSiteContent } from '@/lib/site-content'
+import VenmoTicketWidget from '@/components/VenmoTicketWidget'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -22,6 +23,8 @@ async function getShows() {
         location: string
         ticketLink: string | null
         ticketInfo: string | null
+        ticketPrice: number | null
+        ticketNamesRequired: boolean | null
         status: string
         isPublic: boolean
       })
@@ -137,11 +140,19 @@ export default async function ShowsPage() {
                       )}
                     </div>
 
-                    {show.ticketInfo && (
-                      <p className="text-sm text-arden-text bg-arden-black/40 border-l-2 border-arden-accent px-4 py-2.5 leading-relaxed">
-                        <span className="text-arden-accent text-xs tracking-widest uppercase mr-2">Tickets</span>
-                        {show.ticketInfo}
-                      </p>
+                    {show.ticketPrice && show.ticketPrice > 0 ? (
+                      <VenmoTicketWidget
+                        price={show.ticketPrice}
+                        namesRequired={show.ticketNamesRequired === true}
+                        venue={show.venue}
+                      />
+                    ) : (
+                      show.ticketInfo && (
+                        <p className="text-sm text-arden-text bg-arden-black/40 border-l-2 border-arden-accent px-4 py-2.5 leading-relaxed">
+                          <span className="text-arden-accent text-xs tracking-widest uppercase mr-2">Tickets</span>
+                          {show.ticketInfo}
+                        </p>
+                      )
                     )}
                   </div>
                 </div>
