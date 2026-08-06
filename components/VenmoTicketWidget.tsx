@@ -13,6 +13,9 @@ export type TicketNameMode = 'none' | 'party' | 'all'
  * depending on the show's setting), then tap through to Venmo with the amount
  * and note already filled in — e.g. "2 tickets - $20: Kyle, Sam" or
  * "4 tickets - $40 — under Kyle".
+ *
+ * 'all' mode shows one name box per ticket; boxes appear/disappear with the
+ * quantity stepper.
  */
 export default function VenmoTicketWidget({
   price,
@@ -24,17 +27,37 @@ export default function VenmoTicketWidget({
   venue: string
 }) {
   const [qty, setQty] = useState(1)
-  const [names, setNames] = useState('')
+  const [partyName, setPartyName] = useState('')
+  // Sparse name storage — the visible box count derives from qty directly
+  const [names, setNames] = useState<string[]>([])
+
+  const step = (delta: number) =>
+    setQty(prev => Math.min(MAX_TICKETS, Math.max(1, prev + delta)))
+
+  const setNameAt = (i: number, value: string) => {
+    setNames(prev => {
+      const next = [...prev]
+      next[i] = value
+      return next
+    })
+  }
 
   const total = qty * price
-  const namesMissing = nameMode !== 'none' && names.trim().length === 0
+  const ticketNames = Array.from({ length: qty }, (_, i) => (names[i] || '').trim())
+  const filledNames = ticketNames.filter(Boolean)
+  const namesMissing =
+    nameMode === 'party'
+      ? partyName.trim().length === 0
+      : nameMode === 'all'
+        ? filledNames.length < qty
+        : false
 
   const nameSuffix =
-    names.trim().length === 0
-      ? ''
-      : nameMode === 'party'
-        ? ` — under ${names.trim()}`
-        : `: ${names.trim()}`
+    nameMode === 'party' && partyName.trim()
+      ? ` — under ${partyName.trim()}`
+      : nameMode === 'all' && filledNames.length > 0
+        ? `: ${filledNames.join(', ')}`
+        : ''
   const note = `${qty} ticket${qty === 1 ? '' : 's'} - $${total} (${venue})${nameSuffix}`
   const venmoUrl = `https://venmo.com/${VENMO_USER}?txn=pay&amount=${total}&note=${encodeURIComponent(note)}`
 
@@ -49,7 +72,7 @@ export default function VenmoTicketWidget({
         <div className="flex items-center border border-arden-border">
           <button
             type="button"
-            onClick={() => setQty(q => Math.max(1, q - 1))}
+            onClick={() => step(-1)}
             aria-label="Fewer tickets"
             className="px-3 py-2 text-arden-subtext hover:text-arden-accent transition-colors disabled:opacity-40"
             disabled={qty <= 1}
@@ -59,7 +82,7 @@ export default function VenmoTicketWidget({
           <span className="w-10 text-center text-arden-white font-mono text-sm">{qty}</span>
           <button
             type="button"
-            onClick={() => setQty(q => Math.min(MAX_TICKETS, q + 1))}
+            onClick={() => step(1)}
             aria-label="More tickets"
             className="px-3 py-2 text-arden-subtext hover:text-arden-accent transition-colors disabled:opacity-40"
             disabled={qty >= MAX_TICKETS}
@@ -82,26 +105,37 @@ export default function VenmoTicketWidget({
         </a>
       </div>
 
-      {nameMode !== 'none' && (
+      {nameMode === 'party' && (
         <div className="mt-3">
           <input
             type="text"
-            value={names}
-            onChange={e => setNames(e.target.value)}
-            placeholder={
-              nameMode === 'party'
-                ? 'Name for the tickets (required)'
-                : qty === 1
-                  ? 'Your name (required)'
-                  : `${qty} names, comma separated (required)`
-            }
-            maxLength={200}
+            value={partyName}
+            onChange={e => setPartyName(e.target.value)}
+            placeholder="Name for the tickets (required)"
+            maxLength={100}
             className="w-full max-w-md bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
           />
           <p className="text-arden-subtext text-xs mt-1.5">
-            {nameMode === 'party'
-              ? `Your ${qty === 1 ? 'ticket' : 'tickets'} will be under this name at the door.`
-              : 'Names go in the Venmo note so we can check you in at the door.'}
+            Your {qty === 1 ? 'ticket' : 'tickets'} will be under this name at the door.
+          </p>
+        </div>
+      )}
+
+      {nameMode === 'all' && (
+        <div className="mt-3 space-y-2">
+          {Array.from({ length: qty }, (_, i) => (
+            <input
+              key={i}
+              type="text"
+              value={names[i] || ''}
+              onChange={e => setNameAt(i, e.target.value)}
+              placeholder={`Ticket ${i + 1} — name (required)`}
+              maxLength={100}
+              className="block w-full max-w-md bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
+            />
+          ))}
+          <p className="text-arden-subtext text-xs pt-0.5">
+            Each name goes in the Venmo note so we can check everyone in at the door.
           </p>
         </div>
       )}
