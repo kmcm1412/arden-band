@@ -62,20 +62,23 @@ function HeroContent({
       <div className="hero-enter flex flex-wrap items-baseline gap-x-5 gap-y-1 mb-4">
         <h1
           className="heading-display text-[clamp(3rem,7vw,5rem)] text-arden-white leading-none"
-          style={{ letterSpacing: '-0.02em' }}
+          style={{ letterSpacing: '-0.02em', textShadow: '0 2px 16px rgba(0,0,0,0.85)' }}
         >
           Arden
         </h1>
         <span className="flex items-baseline gap-3">
           <span className="hidden sm:block w-10 h-px bg-arden-accent self-center" aria-hidden="true" />
-          <span className="font-display text-arden-accent font-bold uppercase tracking-[0.2em] text-xl md:text-2xl">
+          <span
+            className="font-display text-arden-accent font-bold uppercase tracking-[0.2em] text-xl md:text-2xl"
+            style={{ textShadow: '0 2px 12px rgba(0,0,0,0.9)' }}
+          >
             Est. {estYear}
           </span>
         </span>
       </div>
       <p
-        className="hero-enter text-arden-subtext text-base md:text-lg max-w-xl leading-relaxed mb-6"
-        style={{ animationDelay: '0.15s' }}
+        className="hero-enter text-arden-text text-base md:text-lg max-w-xl leading-relaxed mb-6 font-medium"
+        style={{ animationDelay: '0.15s', textShadow: '0 1px 10px rgba(0,0,0,0.9)' }}
       >
         {heroTagline}
       </p>
@@ -225,6 +228,14 @@ export default async function HomePage() {
               className="absolute inset-0"
               style={{
                 background: 'linear-gradient(to bottom, transparent 48%, rgba(10,10,10,0.5) 64%, rgba(10,10,10,0.85) 82%, #0a0a0a 97%)',
+              }}
+            />
+            {/* Text-corner scrim — guarantees legibility when a short viewport
+                crops the photo so its bright center lands behind the text */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: 'radial-gradient(ellipse 55% 60% at 14% 92%, rgba(10,10,10,0.8) 0%, rgba(10,10,10,0.45) 55%, transparent 78%)',
               }}
             />
           </div>
