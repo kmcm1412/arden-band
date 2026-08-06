@@ -21,10 +21,13 @@ export default function VenmoTicketWidget({
   price,
   nameMode,
   venue,
+  simple = false,
 }: {
   price: number
   nameMode: TicketNameMode
   venue: string
+  /** Failsafe mode: just the price and a link to the band's Venmo page */
+  simple?: boolean
 }) {
   const [qty, setQty] = useState(1)
   const [partyName, setPartyName] = useState('')
@@ -59,7 +62,62 @@ export default function VenmoTicketWidget({
         ? `: ${filledNames.join(', ')}`
         : ''
   const note = `${qty} ticket${qty === 1 ? '' : 's'} - $${total} (${venue})${nameSuffix}`
-  const venmoUrl = `https://venmo.com/${VENMO_USER}?txn=pay&amount=${total}&note=${encodeURIComponent(note)}`
+  const encNote = encodeURIComponent(note)
+
+  // The legacy venmo.com/<user>?txn=pay format dead-ends in a redirect loop.
+  // App scheme opens the Venmo app straight onto the prefilled pay screen;
+  // the payment-link page is Venmo's official web surface (no auth to view).
+  const appUrl = `venmo://paycharge?txn=pay&recipients=${VENMO_USER}&amount=${total}&note=${encNote}`
+  const webUrl = `https://account.venmo.com/payment-link?audience=private&txn=pay&recipients=${VENMO_USER}&amount=${total}&note=${encNote}`
+
+  const openVenmo = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (namesMissing) return
+    const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent)
+    if (isMobile) {
+      // Try the app first; if it doesn't take over the screen within ~1.5s
+      // (not installed), fall back to Venmo's web payment page
+      window.location.href = appUrl
+      setTimeout(() => {
+        if (document.visibilityState === 'visible') {
+          window.location.href = webUrl
+        }
+      }, 1500)
+    } else {
+      window.open(webUrl, '_blank', 'noopener')
+    }
+  }
+
+  if (simple) {
+    return (
+      <div className="bg-arden-black/40 border-l-2 border-arden-accent px-4 py-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <p className="text-arden-accent text-xs tracking-widest uppercase">
+            Tickets · ${price} each
+          </p>
+          <a
+            href={`https://account.venmo.com/u/${VENMO_USER}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary text-xs py-2.5 px-5"
+          >
+            Pay @{VENMO_USER} on Venmo <ExternalLink size={12} />
+          </a>
+        </div>
+        <details className="mt-3 hidden md:block">
+          <summary className="text-xs text-arden-subtext hover:text-arden-accent cursor-pointer tracking-wider uppercase">
+            On desktop? Scan to pay
+          </summary>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/venmo-qr.png"
+            alt="Venmo QR code for @ardenjams"
+            className="mt-2 w-36 h-36 bg-white p-2"
+          />
+        </details>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-arden-black/40 border-l-2 border-arden-accent px-4 py-4">
@@ -94,11 +152,10 @@ export default function VenmoTicketWidget({
         <span className="text-arden-white font-mono font-medium">${total}</span>
 
         <a
-          href={namesMissing ? undefined : venmoUrl}
-          target="_blank"
+          href={namesMissing ? undefined : webUrl}
           rel="noopener noreferrer"
           aria-disabled={namesMissing}
-          onClick={e => { if (namesMissing) e.preventDefault() }}
+          onClick={openVenmo}
           className={`btn-primary text-xs py-2.5 px-5 ${namesMissing ? 'opacity-40 cursor-not-allowed' : ''}`}
         >
           Pay with Venmo <ExternalLink size={12} />

@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { db } from '@/lib/firebase/client'
 import { collection, getDocs } from 'firebase/firestore'
 import { Show } from '@/lib/types'
-import { BarChart3, MapPin } from 'lucide-react'
+import { BarChart3, ChevronRight, MapPin } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 
 interface ShowStats {
@@ -109,12 +110,34 @@ function HistoryPageContent() {
         <StatTile label="Upcoming" value={stats.upcoming} sub={daysToNext !== null ? `next in ${daysToNext} day${daysToNext === 1 ? '' : 's'}` : 'nothing booked'} />
       </div>
 
+      {/* Money totals — appears once any sales or stats are logged */}
+      {(() => {
+        const ticketRevenue = shows.reduce((sum, s) => sum + (s.ticketSales || []).reduce((n, t) => n + (t.amount || 0), 0), 0)
+        const ticketsSold = shows.reduce((sum, s) => sum + (s.ticketSales || []).reduce((n, t) => n + (t.qty || 0), 0), 0)
+        const payout = shows.reduce((sum, s) => sum + (s.stats?.payout || 0), 0)
+        const merch = shows.reduce((sum, s) => sum + (s.stats?.merchSales || 0), 0)
+        const costs = shows.reduce((sum, s) => sum + (s.stats?.costs || 0), 0)
+        const net = ticketRevenue + payout + merch - costs
+        if (ticketsSold === 0 && payout === 0 && costs === 0 && merch === 0) return null
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <StatTile label="Tickets Sold" value={ticketsSold} sub={`$${ticketRevenue} in ticket sales`} />
+            <StatTile label="Payouts" value={`$${payout}`} sub="from venues & hosts" />
+            <StatTile label="Costs" value={`$${costs}`} sub={merch > 0 ? `+$${merch} merch sold` : undefined} />
+            <StatTile label="Net Earned" value={`$${net}`} sub="all-time, logged shows" />
+          </div>
+        )
+      })()}
+
       {stats.nextShow && (
-        <div className="mb-10 p-4 bg-arden-surface border-l-2 border-arden-accent text-sm">
+        <Link
+          href={`/dashboard/shows/${stats.nextShow.id}`}
+          className="block mb-10 p-4 bg-arden-surface border-l-2 border-arden-accent text-sm hover:bg-arden-muted transition-colors"
+        >
           <span className="text-arden-accent text-xs tracking-widest uppercase mr-3">Next Up</span>
           <span className="text-arden-white font-medium">{nextShowLabel}</span>
           {stats.nextShow.location && <span className="text-arden-subtext"> · {stats.nextShow.location}</span>}
-        </div>
+        </Link>
       )}
 
       {/* History list */}
@@ -131,8 +154,13 @@ function HistoryPageContent() {
           <div className="space-y-2">
             {past.map(show => {
               const d = new Date(show.datetime)
+              const sold = (show.ticketSales || []).reduce((n, t) => n + (t.qty || 0), 0)
               return (
-                <div key={show.id} className="p-4 bg-arden-surface border border-arden-border">
+                <Link
+                  key={show.id}
+                  href={`/dashboard/shows/${show.id}`}
+                  className="block p-4 bg-arden-surface border border-arden-border hover:border-arden-accent/50 hover:bg-arden-muted transition-colors group"
+                >
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="flex-shrink-0 text-center w-12">
@@ -153,6 +181,11 @@ function HistoryPageContent() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      {sold > 0 && (
+                        <span className="text-xs px-2 py-0.5 border border-arden-accent/40 text-arden-accent tracking-wider uppercase">
+                          {sold} sold
+                        </span>
+                      )}
                       {show.status === 'cancelled' && (
                         <span className="text-xs px-2 py-0.5 border border-red-900 text-red-400 tracking-wider uppercase">
                           Cancelled
@@ -163,12 +196,13 @@ function HistoryPageContent() {
                           Private
                         </span>
                       )}
+                      <ChevronRight size={15} className="text-arden-border group-hover:text-arden-accent transition-colors" />
                     </div>
                   </div>
                   {show.notes && (
                     <p className="mt-2 ml-16 text-arden-subtext text-xs leading-relaxed">{show.notes}</p>
                   )}
-                </div>
+                </Link>
               )
             })}
           </div>

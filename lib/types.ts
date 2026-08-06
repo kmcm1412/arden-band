@@ -27,12 +27,47 @@ export interface Show {
    * 'none' | 'party' (one name for will call) | 'all' (every ticketholder)
    */
   ticketNameMode?: 'none' | 'party' | 'all'
+  /**
+   * Venmo checkout style: 'full' = quantity picker + prefilled payment;
+   * 'simple' = just the price and a link to the band's Venmo page
+   */
+  ticketWidgetMode?: 'full' | 'simple'
   /** @deprecated superseded by ticketNameMode — old boolean kept for back-compat reads */
   ticketNamesRequired?: boolean
+  /** Ticket sales ledger — trackable before and after the show */
+  ticketSales?: TicketSale[]
+  /** Post-show numbers, filled in by the band afterwards */
+  stats?: ShowStats
   notes?: string
   status: 'confirmed' | 'pending' | 'cancelled'
   isPublic: boolean
   createdAt?: string
+}
+
+export interface TicketSale {
+  id: string
+  /** Buyer / party name */
+  name: string
+  /** Number of tickets in this sale */
+  qty: number
+  method: 'venmo' | 'cash' | 'door' | 'other'
+  /** Dollars received for this sale */
+  amount: number
+  note?: string
+  addedAt: string
+}
+
+export interface ShowStats {
+  /** Headcount at the show (may differ from tickets sold) */
+  attendance?: number
+  /** What the band was paid by the venue/host */
+  payout?: number
+  /** Expenses: travel, gear, fees, etc. */
+  costs?: number
+  /** Merch revenue at the show */
+  merchSales?: number
+  /** Post-show debrief notes */
+  notes?: string
 }
 
 export interface MerchItem {

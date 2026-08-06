@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useAuth } from '@/lib/auth/context'
 import { db } from '@/lib/firebase/client'
 import {
@@ -19,6 +20,7 @@ const EMPTY_SHOW: Omit<Show, 'id'> = {
   ticketInfo: '',
   ticketPrice: 0,
   ticketNameMode: 'none',
+  ticketWidgetMode: 'full',
   notes: '',
   status: 'pending',
   isPublic: true,
@@ -181,18 +183,33 @@ export default function ShowsPage() {
               </div>
               <div>
                 <label className="text-xs tracking-widest uppercase text-arden-subtext block mb-1">
-                  Names in Venmo note
+                  Checkout style
                 </label>
                 <select
-                  value={form.ticketNameMode || (form.ticketNamesRequired ? 'all' : 'none')}
-                  onChange={e => setForm(f => ({ ...f, ticketNameMode: e.target.value as Show['ticketNameMode'] }))}
+                  value={form.ticketWidgetMode || 'full'}
+                  onChange={e => setForm(f => ({ ...f, ticketWidgetMode: e.target.value as Show['ticketWidgetMode'] }))}
                   className="w-full bg-arden-black border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
                 >
-                  <option value="none">Not needed</option>
-                  <option value="party">Party name — one name for will call</option>
-                  <option value="all">All ticketholder names</option>
+                  <option value="full">Full — quantity picker + prefilled payment</option>
+                  <option value="simple">Simple — price + Venmo link only</option>
                 </select>
               </div>
+              {(form.ticketWidgetMode || 'full') === 'full' && (
+                <div>
+                  <label className="text-xs tracking-widest uppercase text-arden-subtext block mb-1">
+                    Names in Venmo note
+                  </label>
+                  <select
+                    value={form.ticketNameMode || (form.ticketNamesRequired ? 'all' : 'none')}
+                    onChange={e => setForm(f => ({ ...f, ticketNameMode: e.target.value as Show['ticketNameMode'] }))}
+                    className="w-full bg-arden-black border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                  >
+                    <option value="none">Not needed</option>
+                    <option value="party">Party name — one name for will call</option>
+                    <option value="all">All ticketholder names</option>
+                  </select>
+                </div>
+              )}
             </div>
           </div>
           <div className="mt-4">
@@ -230,9 +247,9 @@ export default function ShowsPage() {
         )}
         {shows.map(show => (
           <div key={show.id} className="flex items-center justify-between p-4 bg-arden-surface border border-arden-border hover:border-arden-muted transition-colors">
-            <div className="flex-1 min-w-0">
+            <Link href={`/dashboard/shows/${show.id}`} className="flex-1 min-w-0 group/row">
               <div className="flex items-center gap-3 mb-1">
-                <span className="font-medium text-arden-white">{show.venue}</span>
+                <span className="font-medium text-arden-white group-hover/row:text-arden-accent transition-colors">{show.venue}</span>
                 <span className={`text-xs px-2 py-0.5 border tracking-wider uppercase ${
                   show.status === 'confirmed' ? 'border-green-800 text-green-400' :
                   show.status === 'cancelled' ? 'border-red-900 text-red-400' :
@@ -246,8 +263,13 @@ export default function ShowsPage() {
                   </span>
                 )}
               </div>
-              <p className="text-arden-subtext text-sm">{show.location} &middot; {show.datetime ? formatDateTime(show.datetime) : '—'}</p>
-            </div>
+              <p className="text-arden-subtext text-sm">
+                {show.location} &middot; {show.datetime ? formatDateTime(show.datetime) : '—'}
+                {(show.ticketSales?.length || 0) > 0 && (
+                  <span className="text-arden-accent"> &middot; {show.ticketSales!.reduce((n, s) => n + s.qty, 0)} sold</span>
+                )}
+              </p>
+            </Link>
             <div className="flex items-center gap-2 ml-4">
               {show.ticketLink && (
                 <a href={show.ticketLink} target="_blank" rel="noopener noreferrer"

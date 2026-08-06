@@ -25,6 +25,7 @@ async function getShows() {
         ticketInfo: string | null
         ticketPrice: number | null
         ticketNameMode: 'none' | 'party' | 'all' | null
+        ticketWidgetMode: 'full' | 'simple' | null
         ticketNamesRequired: boolean | null
         status: string
         isPublic: boolean
@@ -129,7 +130,8 @@ export default async function ShowsPage() {
                         </div>
                       </div>
 
-                      {show.ticketLink && (
+                      {/* Generic ticket button only when the Venmo widget isn't handling tickets */}
+                      {show.ticketLink && !(show.ticketPrice && show.ticketPrice > 0) && (
                         <a
                           href={show.ticketLink}
                           target="_blank"
@@ -146,6 +148,7 @@ export default async function ShowsPage() {
                         price={show.ticketPrice}
                         nameMode={show.ticketNameMode || (show.ticketNamesRequired ? 'all' : 'none')}
                         venue={show.venue}
+                        simple={show.ticketWidgetMode === 'simple'}
                       />
                     ) : (
                       show.ticketInfo && (
