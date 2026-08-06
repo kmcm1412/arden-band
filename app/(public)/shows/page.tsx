@@ -24,6 +24,7 @@ async function getShows() {
         ticketLink: string | null
         ticketInfo: string | null
         ticketPrice: number | null
+        ticketNameMode: 'none' | 'party' | 'all' | null
         ticketNamesRequired: boolean | null
         status: string
         isPublic: boolean
@@ -143,7 +144,7 @@ export default async function ShowsPage() {
                     {show.ticketPrice && show.ticketPrice > 0 ? (
                       <VenmoTicketWidget
                         price={show.ticketPrice}
-                        namesRequired={show.ticketNamesRequired === true}
+                        nameMode={show.ticketNameMode || (show.ticketNamesRequired ? 'all' : 'none')}
                         venue={show.venue}
                       />
                     ) : (

@@ -22,7 +22,12 @@ export interface Show {
   ticketInfo?: string
   /** Price per ticket in dollars — set > 0 to enable the Venmo checkout widget on the public shows page */
   ticketPrice?: number
-  /** Whether the Venmo checkout asks buyers for attendee names to include in the payment note */
+  /**
+   * What names the Venmo checkout collects for the payment note:
+   * 'none' | 'party' (one name for will call) | 'all' (every ticketholder)
+   */
+  ticketNameMode?: 'none' | 'party' | 'all'
+  /** @deprecated superseded by ticketNameMode — old boolean kept for back-compat reads */
   ticketNamesRequired?: boolean
   notes?: string
   status: 'confirmed' | 'pending' | 'cancelled'

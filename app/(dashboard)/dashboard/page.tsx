@@ -1,6 +1,9 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth/context'
+import { db } from '@/lib/firebase/client'
+import { collection, getDocs } from 'firebase/firestore'
 import { Music, Calendar, ListMusic, Users, Megaphone, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
@@ -37,15 +40,51 @@ const cards = [
 
 export default function DashboardOverview() {
   const { membership } = useAuth()
+  const [quickStats, setQuickStats] = useState<{ played: number; upcoming: number } | null>(null)
+
+  useEffect(() => {
+    if (!membership?.active) return
+    getDocs(collection(db, 'shows'))
+      .then(snap => {
+        const now = new Date()
+        const shows = snap.docs
+          .map(d => d.data() as { datetime?: string; status?: string })
+          .filter(s => s.datetime && s.status !== 'cancelled')
+        setQuickStats({
+          played: shows.filter(s => new Date(s.datetime!) <= now).length,
+          upcoming: shows.filter(s => new Date(s.datetime!) > now).length,
+        })
+      })
+      .catch(() => {})
+  }, [membership])
 
   return (
     <div className="p-6 md:p-8 max-w-5xl mx-auto">
-      <div className="mb-10">
+      <div className="mb-8">
         <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1">Band Portal</p>
         <h1 className="text-2xl font-display font-bold text-arden-white">
           Welcome back{membership?.displayName ? `, ${membership.displayName}` : ''}.
         </h1>
       </div>
+
+      {quickStats && (
+        <Link
+          href="/dashboard/history"
+          className="group flex items-center gap-8 mb-8 p-4 bg-arden-surface border border-arden-border hover:border-arden-muted transition-colors"
+        >
+          <div>
+            <p className="text-arden-white font-display font-bold text-2xl leading-none">{quickStats.played}</p>
+            <p className="text-arden-subtext text-xs tracking-wider uppercase mt-1">Shows played</p>
+          </div>
+          <div>
+            <p className="text-arden-white font-display font-bold text-2xl leading-none">{quickStats.upcoming}</p>
+            <p className="text-arden-subtext text-xs tracking-wider uppercase mt-1">Upcoming</p>
+          </div>
+          <span className="ml-auto flex items-center gap-2 text-xs text-arden-subtext group-hover:text-arden-accent transition-colors uppercase tracking-wider">
+            History &amp; Stats <ArrowRight size={14} />
+          </span>
+        </Link>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
         {cards.map((card) => (

@@ -6,29 +6,36 @@ import { Minus, Plus, ExternalLink } from 'lucide-react'
 const VENMO_USER = 'ardenjams'
 const MAX_TICKETS = 10
 
+export type TicketNameMode = 'none' | 'party' | 'all'
+
 /**
- * Prefilled-Venmo ticket checkout: fans pick a quantity (and names when the
- * show requires them), then tap through to Venmo with the amount and note
- * already filled in — e.g. "2 tickets - $20: Kyle, Sam".
+ * Prefilled-Venmo ticket checkout: fans pick a quantity (and a name or names,
+ * depending on the show's setting), then tap through to Venmo with the amount
+ * and note already filled in — e.g. "2 tickets - $20: Kyle, Sam" or
+ * "4 tickets - $40 — under Kyle".
  */
 export default function VenmoTicketWidget({
   price,
-  namesRequired,
+  nameMode,
   venue,
 }: {
   price: number
-  namesRequired: boolean
+  nameMode: TicketNameMode
   venue: string
 }) {
   const [qty, setQty] = useState(1)
   const [names, setNames] = useState('')
 
   const total = qty * price
-  const namesMissing = namesRequired && names.trim().length === 0
+  const namesMissing = nameMode !== 'none' && names.trim().length === 0
 
-  const note = `${qty} ticket${qty === 1 ? '' : 's'} - $${total} (${venue})${
-    names.trim() ? ': ' + names.trim() : ''
-  }`
+  const nameSuffix =
+    names.trim().length === 0
+      ? ''
+      : nameMode === 'party'
+        ? ` — under ${names.trim()}`
+        : `: ${names.trim()}`
+  const note = `${qty} ticket${qty === 1 ? '' : 's'} - $${total} (${venue})${nameSuffix}`
   const venmoUrl = `https://venmo.com/${VENMO_USER}?txn=pay&amount=${total}&note=${encodeURIComponent(note)}`
 
   return (
@@ -75,18 +82,26 @@ export default function VenmoTicketWidget({
         </a>
       </div>
 
-      {namesRequired && (
+      {nameMode !== 'none' && (
         <div className="mt-3">
           <input
             type="text"
             value={names}
             onChange={e => setNames(e.target.value)}
-            placeholder={qty === 1 ? 'Your name (required)' : `${qty} names, comma separated (required)`}
+            placeholder={
+              nameMode === 'party'
+                ? 'Name for the tickets (required)'
+                : qty === 1
+                  ? 'Your name (required)'
+                  : `${qty} names, comma separated (required)`
+            }
             maxLength={200}
             className="w-full max-w-md bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
           />
           <p className="text-arden-subtext text-xs mt-1.5">
-            Names go in the Venmo note so we can check you in at the door.
+            {nameMode === 'party'
+              ? `Your ${qty === 1 ? 'ticket' : 'tickets'} will be under this name at the door.`
+              : 'Names go in the Venmo note so we can check you in at the door.'}
           </p>
         </div>
       )}

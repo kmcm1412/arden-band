@@ -18,7 +18,7 @@ const EMPTY_SHOW: Omit<Show, 'id'> = {
   ticketLink: '',
   ticketInfo: '',
   ticketPrice: 0,
-  ticketNamesRequired: false,
+  ticketNameMode: 'none',
   notes: '',
   status: 'pending',
   isPublic: true,
@@ -179,16 +179,19 @@ export default function ShowsPage() {
                   className="w-full bg-arden-black border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
                 />
               </div>
-              <div className="flex items-end pb-2">
-                <label className="flex items-center gap-2 cursor-pointer text-sm text-arden-text">
-                  <input
-                    type="checkbox"
-                    checked={form.ticketNamesRequired || false}
-                    onChange={e => setForm(f => ({ ...f, ticketNamesRequired: e.target.checked }))}
-                    className="accent-[#c8a96e]"
-                  />
-                  Ask for attendee names (added to the Venmo note)
+              <div>
+                <label className="text-xs tracking-widest uppercase text-arden-subtext block mb-1">
+                  Names in Venmo note
                 </label>
+                <select
+                  value={form.ticketNameMode || (form.ticketNamesRequired ? 'all' : 'none')}
+                  onChange={e => setForm(f => ({ ...f, ticketNameMode: e.target.value as Show['ticketNameMode'] }))}
+                  className="w-full bg-arden-black border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"
+                >
+                  <option value="none">Not needed</option>
+                  <option value="party">Party name — one name for will call</option>
+                  <option value="all">All ticketholder names</option>
+                </select>
               </div>
             </div>
           </div>

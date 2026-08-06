@@ -8,6 +8,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase/client'
 import { useAuth } from '@/lib/auth/context'
 import {
+  BarChart3,
   Calendar,
   History,
   Music,
@@ -28,6 +29,7 @@ const navItems = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exact: true },
   { href: '/dashboard/availability', label: 'Availability', icon: Calendar },
   { href: '/dashboard/shows', label: 'Shows', icon: Music },
+  { href: '/dashboard/history', label: 'History & Stats', icon: BarChart3 },
   { href: '/dashboard/setlists', label: 'Set Lists', icon: ListMusic },
   { href: '/dashboard/content', label: 'Content', icon: LayoutDashboard },
   { href: '/dashboard/opportunities', label: 'Opportunities', icon: Megaphone },
