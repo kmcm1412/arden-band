@@ -11,7 +11,7 @@ export const metadata = {
 export default async function AboutPage() {
   const content = await getSiteContent()
 
-  const aboutPageHeading = content.aboutPageHeading || 'Arden is an indie rock band playing original music.'
+  const aboutPageHeading = content.aboutPageHeading || 'Arden is a Long Island jam band built on improvisation.'
   const aboutPageBio1 = content.aboutPageBio1 || 'Formed through shared obsessions with sound and performance, Arden has spent their time building something real — not a genre exercise, but a body of work that reflects who they are.'
   const aboutPageBio2 = content.aboutPageBio2 || 'The songs are lived in. The performances are committed. The band shows up with something to say and the chops to say it.'
   const aboutPageBio3 = content.aboutPageBio3 || 'Based out of the Northeast, they play wherever the rooms are right and the people are ready.'

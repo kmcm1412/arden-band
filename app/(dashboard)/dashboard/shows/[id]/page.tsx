@@ -4,19 +4,21 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { db } from '@/lib/firebase/client'
-import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, runTransaction } from 'firebase/firestore'
 import { Show, TicketSale, ShowStats } from '@/lib/types'
 import { useAuth } from '@/lib/auth/context'
 import { logActivity } from '@/lib/activity'
-import { formatDateTime } from '@/lib/utils'
-import { ArrowLeft, Plus, Trash2, Ticket, DollarSign, Save } from 'lucide-react'
+import { formatDateTime, fmtMoney, roundMoney } from '@/lib/utils'
+import { ArrowLeft, Pencil, Plus, Trash2, Ticket, DollarSign, Save } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 
 const EMPTY_SALE = { name: '', qty: 1, method: 'venmo' as TicketSale['method'], amount: 0, note: '' }
 const EMPTY_STATS: ShowStats = { attendance: undefined, payout: undefined, costs: undefined, merchSales: undefined, notes: '' }
 
 function genId() {
-  return Math.random().toString(36).slice(2, 10)
+  return typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID().slice(0, 8)
+    : Math.random().toString(36).slice(2, 10)
 }
 
 function ShowDetailContent() {
@@ -30,6 +32,7 @@ function ShowDetailContent() {
   const [error, setError] = useState('')
   const [saleForm, setSaleForm] = useState(EMPTY_SALE)
   const [addingSale, setAddingSale] = useState(false)
+  const [editingSaleId, setEditingSaleId] = useState<string | null>(null)
   const [statsForm, setStatsForm] = useState<ShowStats>(EMPTY_STATS)
   const [statsSaving, setStatsSaving] = useState(false)
   const [statsSaved, setStatsSaved] = useState(false)
@@ -55,43 +58,83 @@ function ShowDetailContent() {
 
   const sales = show?.ticketSales || []
   const ticketsSold = sales.reduce((sum, s) => sum + (s.qty || 0), 0)
-  const ticketRevenue = sales.reduce((sum, s) => sum + (s.amount || 0), 0)
+  const ticketRevenue = roundMoney(sales.reduce((sum, s) => sum + (s.amount || 0), 0))
   const stats = show?.stats || {}
-  const net = (stats.payout || 0) + (stats.merchSales || 0) + ticketRevenue - (stats.costs || 0)
+  const net = roundMoney((stats.payout || 0) + (stats.merchSales || 0) + ticketRevenue - (stats.costs || 0))
   const isPast = show ? new Date(show.datetime) <= new Date() : false
 
-  const persistSales = async (next: TicketSale[], action: string, detail: string) => {
-    if (!show?.id) return
+  // Transaction: read-modify-write so two admins logging sales at the same
+  // time can't clobber each other's entries
+  const persistSales = async (
+    mutate: (current: TicketSale[]) => TicketSale[],
+    action: string,
+    detail: string
+  ) => {
+    if (!show?.id) return false
+    const ref = doc(db, 'shows', show.id)
     try {
-      await updateDoc(doc(db, 'shows', show.id), { ticketSales: next })
+      const next = await runTransaction(db, async txn => {
+        const snap = await txn.get(ref)
+        const current = (snap.data()?.ticketSales || []) as TicketSale[]
+        const result = mutate(current)
+        txn.update(ref, { ticketSales: result })
+        return result
+      })
       setShow(s => (s ? { ...s, ticketSales: next } : s))
       logActivity(user, action, detail)
+      return true
     } catch (err) {
       console.error('Failed to save sales:', err)
       setError('Failed to save. Are you an admin?')
+      return false
     }
   }
 
-  const addSale = async () => {
-    if (!saleForm.name.trim() || saleForm.qty < 1) return
-    const sale: TicketSale = {
-      id: genId(),
+  const saveSale = async () => {
+    if (!saleForm.name.trim() || saleForm.qty < 1 || saleForm.amount < 0) return
+    const base = {
       name: saleForm.name.trim(),
       qty: saleForm.qty,
       method: saleForm.method,
-      amount: saleForm.amount,
+      amount: roundMoney(saleForm.amount),
       ...(saleForm.note.trim() ? { note: saleForm.note.trim() } : {}),
-      addedAt: new Date().toISOString(),
     }
-    await persistSales([...sales, sale], 'logged ticket sale', `${sale.name} · ${sale.qty} for $${sale.amount} (${show?.venue})`)
-    setSaleForm(EMPTY_SALE)
-    setAddingSale(false)
+    let ok: boolean
+    if (editingSaleId) {
+      ok = await persistSales(
+        current => current.map(s => (s.id === editingSaleId ? { ...s, ...base } : s)),
+        'edited ticket sale',
+        `${base.name} · ${base.qty} for ${fmtMoney(base.amount)} (${show?.venue})`
+      )
+    } else {
+      const sale: TicketSale = { id: genId(), ...base, addedAt: new Date().toISOString() }
+      ok = await persistSales(
+        current => [...current, sale],
+        'logged ticket sale',
+        `${sale.name} · ${sale.qty} for ${fmtMoney(sale.amount)} (${show?.venue})`
+      )
+    }
+    if (ok) {
+      setSaleForm(EMPTY_SALE)
+      setAddingSale(false)
+      setEditingSaleId(null)
+    }
+  }
+
+  const startEditSale = (sale: TicketSale) => {
+    setSaleForm({ name: sale.name, qty: sale.qty, method: sale.method, amount: sale.amount, note: sale.note || '' })
+    setEditingSaleId(sale.id)
+    setAddingSale(true)
   }
 
   const removeSale = async (id: string) => {
     const sale = sales.find(s => s.id === id)
     if (!confirm(`Remove the sale for ${sale?.name || 'this buyer'}?`)) return
-    await persistSales(sales.filter(s => s.id !== id), 'removed ticket sale', `${sale?.name} (${show?.venue})`)
+    await persistSales(
+      current => current.filter(s => s.id !== id),
+      'removed ticket sale',
+      `${sale?.name} (${show?.venue})`
+    )
   }
 
   const saveStats = async () => {
@@ -163,18 +206,18 @@ function ShowDetailContent() {
         </div>
         <div className="bg-arden-surface border border-arden-border p-4">
           <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Ticket Revenue</p>
-          <p className="text-arden-white font-display font-bold text-2xl">${ticketRevenue}</p>
+          <p className="text-arden-white font-display font-bold text-2xl">{fmtMoney(ticketRevenue)}</p>
         </div>
         <div className="bg-arden-surface border border-arden-border p-4">
           <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Payout + Merch</p>
           <p className="text-arden-white font-display font-bold text-2xl">
-            ${(stats.payout || 0) + (stats.merchSales || 0)}
+            {fmtMoney((stats.payout || 0) + (stats.merchSales || 0))}
           </p>
         </div>
         <div className="bg-arden-surface border border-arden-border p-4">
           <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Net</p>
           <p className={`font-display font-bold text-2xl ${net >= 0 ? 'text-arden-accent' : 'text-red-400'}`}>
-            ${net}
+            {fmtMoney(net)}
           </p>
         </div>
       </div>
@@ -259,10 +302,13 @@ function ShowDetailContent() {
               </div>
             </div>
             <div className="flex gap-3 mt-4">
-              <button onClick={addSale} disabled={!saleForm.name.trim()} className="btn-primary text-xs py-2 px-5 disabled:opacity-50">
-                Add Sale
+              <button onClick={saveSale} disabled={!saleForm.name.trim()} className="btn-primary text-xs py-2 px-5 disabled:opacity-50">
+                {editingSaleId ? 'Update Sale' : 'Add Sale'}
               </button>
-              <button onClick={() => { setAddingSale(false); setSaleForm(EMPTY_SALE) }} className="btn-ghost text-xs py-2 px-5">
+              <button
+                onClick={() => { setAddingSale(false); setEditingSaleId(null); setSaleForm(EMPTY_SALE) }}
+                className="btn-ghost text-xs py-2 px-5"
+              >
                 Cancel
               </button>
             </div>
@@ -283,15 +329,24 @@ function ShowDetailContent() {
                 </div>
                 <span className="text-arden-subtext text-xs uppercase tracking-wider flex-shrink-0">{sale.method}</span>
                 <span className="text-arden-text text-sm font-mono flex-shrink-0">{sale.qty} tkt{sale.qty === 1 ? '' : 's'}</span>
-                <span className="text-arden-accent text-sm font-mono flex-shrink-0 w-14 text-right">${sale.amount}</span>
+                <span className="text-arden-accent text-sm font-mono flex-shrink-0 w-14 text-right">{fmtMoney(sale.amount)}</span>
                 {isAdmin && (
-                  <button
-                    onClick={() => removeSale(sale.id)}
-                    className="text-arden-subtext hover:text-red-400 transition-colors flex-shrink-0"
-                    title="Remove sale"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  <>
+                    <button
+                      onClick={() => startEditSale(sale)}
+                      className="text-arden-subtext hover:text-arden-accent transition-colors flex-shrink-0"
+                      title="Edit sale"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={() => removeSale(sale.id)}
+                      className="text-arden-subtext hover:text-red-400 transition-colors flex-shrink-0"
+                      title="Remove sale"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </>
                 )}
               </div>
             ))}

@@ -6,6 +6,7 @@ import { Send } from 'lucide-react'
 export default function ContactForm() {
   const [form, setForm] = useState({ name: '', email: '', message: '' })
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [errorMsg, setErrorMsg] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,9 +21,12 @@ export default function ContactForm() {
         setStatus('sent')
         setForm({ name: '', email: '', message: '' })
       } else {
+        const data = await res.json().catch(() => ({}))
+        setErrorMsg(data.error || 'Something went wrong. Try again.')
         setStatus('error')
       }
     } catch {
+      setErrorMsg('Network error — check your connection and try again.')
       setStatus('error')
     }
   }
@@ -40,11 +44,13 @@ export default function ContactForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="text-xs tracking-widest uppercase text-arden-subtext block mb-2">
+          <label htmlFor="contact-name" className="text-xs tracking-widest uppercase text-arden-subtext block mb-2">
             Name
           </label>
           <input
+            id="contact-name"
             type="text"
+            autoComplete="name"
             required
             value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -53,11 +59,13 @@ export default function ContactForm() {
           />
         </div>
         <div>
-          <label className="text-xs tracking-widest uppercase text-arden-subtext block mb-2">
+          <label htmlFor="contact-email" className="text-xs tracking-widest uppercase text-arden-subtext block mb-2">
             Email
           </label>
           <input
+            id="contact-email"
             type="email"
+            autoComplete="email"
             required
             value={form.email}
             onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
@@ -67,10 +75,11 @@ export default function ContactForm() {
         </div>
       </div>
       <div>
-        <label className="text-xs tracking-widest uppercase text-arden-subtext block mb-2">
+        <label htmlFor="contact-message" className="text-xs tracking-widest uppercase text-arden-subtext block mb-2">
           Message
         </label>
         <textarea
+          id="contact-message"
           required
           rows={5}
           value={form.message}
@@ -80,7 +89,7 @@ export default function ContactForm() {
         />
       </div>
       {status === 'error' && (
-        <p className="text-red-400 text-sm">Something went wrong. Try again.</p>
+        <p className="text-red-400 text-sm">{errorMsg}</p>
       )}
       <button
         type="submit"

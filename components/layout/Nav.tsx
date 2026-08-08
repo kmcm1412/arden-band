@@ -50,7 +50,7 @@ export default function Nav({ visibility }: { visibility: SectionVisibility }) {
                 href={link.href}
                 className={cn(
                   'text-sm font-medium tracking-wider uppercase transition-colors duration-200',
-                  pathname === link.href
+                  pathname === link.href.split('#')[0]
                     ? 'text-arden-accent'
                     : 'text-arden-subtext hover:text-arden-text'
                 )}
@@ -81,7 +81,7 @@ export default function Nav({ visibility }: { visibility: SectionVisibility }) {
                   onClick={() => setMobileOpen(false)}
                   className={cn(
                     'text-sm font-medium tracking-wider uppercase',
-                    pathname === link.href ? 'text-arden-accent' : 'text-arden-subtext'
+                    pathname === link.href.split('#')[0] ? 'text-arden-accent' : 'text-arden-subtext'
                   )}
                 >
                   {link.label}

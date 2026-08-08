@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
 import { getSiteContent } from '@/lib/site-content'
 import { SoundCloudIcon, YouTubeIcon, InstagramIcon } from '@/components/BrandIcons'
@@ -17,8 +18,22 @@ interface BioLink {
   external?: boolean
 }
 
+async function getNextShow() {
+  try {
+    const snap = await adminDb.collection('shows').get()
+    const now = new Date()
+    const upcoming = snap.docs
+      .map(d => d.data() as { datetime?: string; venue?: string; isPublic?: boolean; status?: string })
+      .filter(s => s.isPublic && s.status !== 'cancelled' && s.datetime && new Date(s.datetime) > now)
+      .sort((a, b) => new Date(a.datetime!).getTime() - new Date(b.datetime!).getTime())
+    return upcoming[0] || null
+  } catch {
+    return null
+  }
+}
+
 export default async function LinksPage() {
-  const [content, visibility] = await Promise.all([getSiteContent(), getVisibility()])
+  const [content, visibility, nextShow] = await Promise.all([getSiteContent(), getVisibility(), getNextShow()])
 
   const tagline = content.linksTagline || content.heroTagline || 'Long Island-based Jam Band'
   const instagramUrl = content.instagramUrl || 'https://www.instagram.com/ardenjams'
@@ -58,6 +73,29 @@ export default async function LinksPage() {
         <p className="text-arden-subtext text-sm text-center mb-10 max-w-xs leading-relaxed">
           {tagline}
         </p>
+
+        {/* Next show — the highest-value link for bio visitors */}
+        {nextShow && visibility.shows && (
+          <Link
+            href="/shows"
+            className="group flex items-center gap-4 w-full border border-arden-accent bg-arden-accent/10 hover:bg-arden-accent px-5 py-4 transition-all duration-200 mb-3"
+          >
+            <span className="relative flex h-2 w-2 flex-shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-arden-accent opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-arden-accent" />
+            </span>
+            <span className="flex-1 text-left">
+              <span className="block text-arden-accent group-hover:text-arden-black font-semibold tracking-wide transition-colors">
+                Next Show ·{' '}
+                {new Date(nextShow.datetime!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+              <span className="block text-arden-subtext group-hover:text-arden-black/70 text-xs mt-0.5 transition-colors">
+                {nextShow.venue} — tickets & info
+              </span>
+            </span>
+            <span className="text-arden-accent group-hover:text-arden-black transition-colors">→</span>
+          </Link>
+        )}
 
         {/* Links */}
         <div className="w-full space-y-3">

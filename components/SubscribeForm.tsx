@@ -43,7 +43,16 @@ export default function SubscribeForm() {
 
   if (status === 'success') {
     return (
-      <p className="text-arden-accent text-sm tracking-wider">{message}</p>
+      <div>
+        <p className="text-arden-accent text-sm tracking-wider">{message}</p>
+        <button
+          type="button"
+          onClick={() => setStatus('idle')}
+          className="mt-2 text-xs text-arden-subtext hover:text-arden-text transition-colors"
+        >
+          + Sign up another email
+        </button>
+      </div>
     )
   }
 
@@ -55,6 +64,8 @@ export default function SubscribeForm() {
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Your name"
+          aria-label="Your name"
+          autoComplete="name"
           required
           className="w-full bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
         />
@@ -64,6 +75,8 @@ export default function SubscribeForm() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="your@email.com"
+            aria-label="Email address"
+            autoComplete="email"
             required
             className="flex-1 bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
           />
@@ -93,6 +106,8 @@ export default function SubscribeForm() {
           value={phone}
           onChange={e => setPhone(e.target.value)}
           placeholder="+1 (555) 000-0000 — SMS updates (optional)"
+          aria-label="Phone number for SMS updates (optional)"
+          autoComplete="tel"
           className="mt-1 w-full bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
         />
       )}

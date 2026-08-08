@@ -51,25 +51,35 @@ export default function ShowsPage() {
 
   const handleSave = async () => {
     if (!form.venue || !form.datetime) return
-    if (editing?.id) {
-      await updateDoc(doc(db, 'shows', editing.id), { ...form })
-      logActivity(user, 'edited show', `${form.venue} · ${form.datetime}`)
-    } else {
-      await addDoc(collection(db, 'shows'), { ...form, createdAt: new Date().toISOString() })
-      logActivity(user, 'added show', `${form.venue} · ${form.datetime}`)
+    try {
+      if (editing?.id) {
+        await updateDoc(doc(db, 'shows', editing.id), { ...form })
+        logActivity(user, 'edited show', `${form.venue} · ${form.datetime}`)
+      } else {
+        await addDoc(collection(db, 'shows'), { ...form, createdAt: new Date().toISOString() })
+        logActivity(user, 'added show', `${form.venue} · ${form.datetime}`)
+      }
+      setEditing(null)
+      setCreating(false)
+      setForm(EMPTY_SHOW)
+      fetchShows()
+    } catch (err) {
+      console.error('Failed to save show:', err)
+      setLoadError('Failed to save the show. Check your connection and try again.')
     }
-    setEditing(null)
-    setCreating(false)
-    setForm(EMPTY_SHOW)
-    fetchShows()
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this show?')) return
     const venue = shows.find(s => s.id === id)?.venue || id
-    await deleteDoc(doc(db, 'shows', id))
-    logActivity(user, 'deleted show', venue)
-    fetchShows()
+    try {
+      await deleteDoc(doc(db, 'shows', id))
+      logActivity(user, 'deleted show', venue)
+      fetchShows()
+    } catch (err) {
+      console.error('Failed to delete show:', err)
+      setLoadError('Failed to delete the show.')
+    }
   }
 
   const startEdit = (show: Show) => {
@@ -175,7 +185,7 @@ export default function ShowsPage() {
                 <input
                   type="number"
                   min="0"
-                  step="1"
+                  step="0.01"
                   value={form.ticketPrice || 0}
                   onChange={e => setForm(f => ({ ...f, ticketPrice: parseFloat(e.target.value) || 0 }))}
                   className="w-full bg-arden-black border border-arden-border text-arden-text px-3 py-2 text-sm focus:outline-none focus:border-arden-accent"

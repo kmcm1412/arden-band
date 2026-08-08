@@ -43,15 +43,15 @@ interface SiteContent {
 }
 
 const DEFAULTS: SiteContent = {
-  estYear: '2022',
-  heroTagline: 'Indie rock from the ground up. Raw energy, honest songs, and a sound that keeps moving.',
-  bio: 'Arden is an indie rock band crafting original music with an honest, lived-in sound. Formed through late-night rehearsals and relentless gigging, the band brings a raw energy to every performance — equal parts careful craft and in-the-moment feeling.',
+  estYear: '2025',
+  heroTagline: 'Long Island-based jam band. Loose, live, and never the same show twice.',
+  bio: 'Arden is a Long Island jam band blending improvisation with songs you know and songs you will. Formed through late-night rehearsals and relentless gigging, the band brings raw energy to every performance — equal parts careful craft and in-the-moment feeling.',
   aboutHeading: 'Built on stage,',
   aboutAccent: 'refined in the room.',
   newsletterHeading: 'Get Updates',
   newsletterDescription: 'New shows, releases, and merch drops — straight to your inbox.',
   aboutImage: '',
-  aboutPageHeading: 'Arden is an indie rock band playing original music.',
+  aboutPageHeading: 'Arden is a Long Island jam band built on improvisation.',
   aboutPageBio1: 'Formed through shared obsessions with sound and performance, Arden has spent their time building something real — not a genre exercise, but a body of work that reflects who they are.',
   aboutPageBio2: 'The songs are lived in. The performances are committed. The band shows up with something to say and the chops to say it.',
   aboutPageBio3: 'Based out of the Northeast, they play wherever the rooms are right and the people are ready.',

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Minus, Plus, ExternalLink } from 'lucide-react'
+import { fmtMoney, roundMoney } from '@/lib/utils'
 
 const VENMO_USER = 'ardenjams'
 const MAX_TICKETS = 10
@@ -45,7 +46,7 @@ export default function VenmoTicketWidget({
     })
   }
 
-  const total = qty * price
+  const total = roundMoney(qty * price)
   const ticketNames = Array.from({ length: qty }, (_, i) => (names[i] || '').trim())
   const filledNames = ticketNames.filter(Boolean)
   const namesMissing =
@@ -61,7 +62,7 @@ export default function VenmoTicketWidget({
       : nameMode === 'all' && filledNames.length > 0
         ? `: ${filledNames.join(', ')}`
         : ''
-  const note = `${qty} ticket${qty === 1 ? '' : 's'} - $${total} (${venue})${nameSuffix}`
+  const note = `${qty} ticket${qty === 1 ? '' : 's'} - ${fmtMoney(total)} (${venue})${nameSuffix}`
   const encNote = encodeURIComponent(note)
 
   // The legacy venmo.com/<user>?txn=pay format dead-ends in a redirect loop.
@@ -93,7 +94,7 @@ export default function VenmoTicketWidget({
       <div className="bg-arden-black/40 border-l-2 border-arden-accent px-4 py-4">
         <div className="flex flex-wrap items-center gap-4">
           <p className="text-arden-accent text-xs tracking-widest uppercase">
-            Tickets · ${price} each
+            Tickets · {fmtMoney(price)} each
           </p>
           <a
             href={`https://account.venmo.com/u/${VENMO_USER}`}
@@ -106,7 +107,7 @@ export default function VenmoTicketWidget({
         </div>
         <details className="mt-3 hidden md:block">
           <summary className="text-xs text-arden-subtext hover:text-arden-accent cursor-pointer tracking-wider uppercase">
-            On desktop? Scan to pay
+            Scan to pay with Venmo
           </summary>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -122,7 +123,7 @@ export default function VenmoTicketWidget({
   return (
     <div className="bg-arden-black/40 border-l-2 border-arden-accent px-4 py-4">
       <p className="text-arden-accent text-xs tracking-widest uppercase mb-3">
-        Tickets · ${price} each
+        Tickets · {fmtMoney(price)} each
       </p>
 
       <div className="flex flex-wrap items-center gap-4">
@@ -149,7 +150,7 @@ export default function VenmoTicketWidget({
           </button>
         </div>
 
-        <span className="text-arden-white font-mono font-medium">${total}</span>
+        <span className="text-arden-white font-mono font-medium">{fmtMoney(total)}</span>
 
         <a
           href={namesMissing ? undefined : webUrl}

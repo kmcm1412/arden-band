@@ -76,7 +76,19 @@ export default async function ShowsPage() {
       show.status === 'cancelled'
         ? 'https://schema.org/EventCancelled'
         : 'https://schema.org/EventScheduled',
-    ...(show.ticketLink ? { offers: { '@type': 'Offer', url: show.ticketLink } } : {}),
+    ...(show.ticketPrice && show.ticketPrice > 0
+      ? {
+          offers: {
+            '@type': 'Offer',
+            price: show.ticketPrice,
+            priceCurrency: 'USD',
+            url: 'https://ardenjams.netlify.app/shows',
+            availability: 'https://schema.org/InStock',
+          },
+        }
+      : show.ticketLink
+        ? { offers: { '@type': 'Offer', url: show.ticketLink } }
+        : {}),
   }))
 
   return (
@@ -85,7 +97,7 @@ export default async function ShowsPage() {
         {eventsJsonLd.length > 0 && (
           <script
             type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(eventsJsonLd) }}
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(eventsJsonLd).replace(/</g, '\\u003c') }}
           />
         )}
         <div className="mb-16">
@@ -177,9 +189,9 @@ export default async function ShowsPage() {
               {past.map((show) => {
                 const d = formatShowDate(show.datetime)
                 return (
-                  <div key={show.id} className="flex items-center gap-6 py-3 opacity-50">
-                    <span className="text-arden-subtext font-mono text-sm w-20 flex-shrink-0">
-                      {d.month} {d.day}
+                  <div key={show.id} className="flex items-center gap-6 py-3 opacity-60">
+                    <span className="text-arden-subtext font-mono text-sm w-28 flex-shrink-0">
+                      {d.month} {d.day}, {new Date(show.datetime).getFullYear()}
                     </span>
                     <span className="text-arden-text">{show.venue}</span>
                     <span className="text-arden-subtext text-sm">{show.location}</span>

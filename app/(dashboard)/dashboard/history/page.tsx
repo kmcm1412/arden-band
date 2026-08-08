@@ -5,10 +5,11 @@ import Link from 'next/link'
 import { db } from '@/lib/firebase/client'
 import { collection, getDocs } from 'firebase/firestore'
 import { Show } from '@/lib/types'
+import { fmtMoney } from '@/lib/utils'
 import { BarChart3, ChevronRight, MapPin } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 
-interface ShowStats {
+interface ShowAggregates {
   played: number
   upcoming: number
   thisYear: number
@@ -19,7 +20,7 @@ interface ShowStats {
   nextShow: Show | null
 }
 
-function computeStats(shows: Show[]): ShowStats {
+function computeStats(shows: Show[]): ShowAggregates {
   const now = new Date()
   const active = shows.filter(s => s.status !== 'cancelled' && s.datetime)
   const past = active
@@ -34,7 +35,7 @@ function computeStats(shows: Show[]): ShowStats {
   for (const s of past) {
     venueCounts.set(s.venue, (venueCounts.get(s.venue) || 0) + 1)
   }
-  let topVenue: ShowStats['topVenue'] = null
+  let topVenue: ShowAggregates['topVenue'] = null
   for (const [name, count] of venueCounts) {
     if (!topVenue || count > topVenue.count) topVenue = { name, count }
   }
@@ -107,24 +108,29 @@ function HistoryPageContent() {
         <StatTile label="Shows Played" value={stats.played} sub={stats.firstShow ? `since ${new Date(stats.firstShow.datetime).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : undefined} />
         <StatTile label={`Played ${now.getFullYear()}`} value={stats.thisYear} sub={stats.lastYear > 0 ? `${stats.lastYear} last year` : undefined} />
         <StatTile label="Venues Hit" value={stats.uniqueVenues} sub={stats.topVenue && stats.topVenue.count > 1 ? `most: ${stats.topVenue.name} (${stats.topVenue.count}x)` : undefined} />
-        <StatTile label="Upcoming" value={stats.upcoming} sub={daysToNext !== null ? `next in ${daysToNext} day${daysToNext === 1 ? '' : 's'}` : 'nothing booked'} />
+        <StatTile
+          label="Upcoming"
+          value={stats.upcoming}
+          sub={daysToNext === null ? 'nothing booked' : daysToNext < 1 ? 'show is today!' : `next in ${daysToNext} day${daysToNext === 1 ? '' : 's'}`}
+        />
       </div>
 
       {/* Money totals — appears once any sales or stats are logged */}
       {(() => {
-        const ticketRevenue = shows.reduce((sum, s) => sum + (s.ticketSales || []).reduce((n, t) => n + (t.amount || 0), 0), 0)
-        const ticketsSold = shows.reduce((sum, s) => sum + (s.ticketSales || []).reduce((n, t) => n + (t.qty || 0), 0), 0)
-        const payout = shows.reduce((sum, s) => sum + (s.stats?.payout || 0), 0)
-        const merch = shows.reduce((sum, s) => sum + (s.stats?.merchSales || 0), 0)
-        const costs = shows.reduce((sum, s) => sum + (s.stats?.costs || 0), 0)
+        const active = shows.filter(s => s.status !== 'cancelled')
+        const ticketRevenue = active.reduce((sum, s) => sum + (s.ticketSales || []).reduce((n, t) => n + (t.amount || 0), 0), 0)
+        const ticketsSold = active.reduce((sum, s) => sum + (s.ticketSales || []).reduce((n, t) => n + (t.qty || 0), 0), 0)
+        const payout = active.reduce((sum, s) => sum + (s.stats?.payout || 0), 0)
+        const merch = active.reduce((sum, s) => sum + (s.stats?.merchSales || 0), 0)
+        const costs = active.reduce((sum, s) => sum + (s.stats?.costs || 0), 0)
         const net = ticketRevenue + payout + merch - costs
         if (ticketsSold === 0 && payout === 0 && costs === 0 && merch === 0) return null
         return (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <StatTile label="Tickets Sold" value={ticketsSold} sub={`$${ticketRevenue} in ticket sales`} />
-            <StatTile label="Payouts" value={`$${payout}`} sub="from venues & hosts" />
-            <StatTile label="Costs" value={`$${costs}`} sub={merch > 0 ? `+$${merch} merch sold` : undefined} />
-            <StatTile label="Net Earned" value={`$${net}`} sub="all-time, logged shows" />
+            <StatTile label="Tickets Sold" value={ticketsSold} sub={`${fmtMoney(ticketRevenue)} in ticket sales`} />
+            <StatTile label="Payouts" value={fmtMoney(payout)} sub="from venues & hosts" />
+            <StatTile label="Costs" value={fmtMoney(costs)} sub={merch > 0 ? `+${fmtMoney(merch)} merch sold` : undefined} />
+            <StatTile label="Net Earned" value={fmtMoney(net)} sub="all-time, logged shows" />
           </div>
         )
       })()}

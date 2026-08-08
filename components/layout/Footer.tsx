@@ -10,6 +10,7 @@ export default async function Footer() {
   const soundcloudUrl = content.soundcloudUrl || ''
 
   const footerLinks = [
+    ...(visibility.media ? [{ href: '/media', label: 'Media' }] : []),
     ...(visibility.shows ? [{ href: '/shows', label: 'Shows' }] : []),
     ...(visibility.merch ? [{ href: '/merch', label: 'Merch' }] : []),
     { href: '/about', label: 'About' },
@@ -33,7 +34,7 @@ export default async function Footer() {
             <a
               href={instagramUrl}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="me noopener noreferrer"
               aria-label="Arden on Instagram"
               className="text-arden-subtext hover:text-arden-accent transition-colors"
             >
@@ -42,7 +43,7 @@ export default async function Footer() {
             <a
               href={youtubeUrl}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="me noopener noreferrer"
               aria-label="Arden on YouTube"
               className="text-arden-subtext hover:text-arden-accent transition-colors"
             >
@@ -52,7 +53,7 @@ export default async function Footer() {
               <a
                 href={soundcloudUrl}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="me noopener noreferrer"
                 aria-label="Arden on SoundCloud"
                 className="text-arden-subtext hover:text-arden-accent transition-colors"
               >

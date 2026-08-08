@@ -5,6 +5,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
 import { getMergedVideos } from '@/lib/youtube'
 import { getSiteContent } from '@/lib/site-content'
+import { fmtMoney } from '@/lib/utils'
 import SubscribeForm from '@/components/SubscribeForm'
 import LiteYouTube from '@/components/LiteYouTube'
 import HeroParallax from '@/components/HeroParallax'
@@ -48,6 +49,7 @@ function HeroContent({
   nextShowLabel,
   visibility,
   socials,
+  isPrimary = false,
 }: {
   estYear: string
   heroTagline: string
@@ -55,17 +57,21 @@ function HeroContent({
   nextShowLabel: string
   visibility: { media: boolean; shows: boolean }
   socials: { href: string; label: string; icon: React.ReactNode }[]
+  /** Only one hero variant should own the page's h1 — the other renders a plain element */
+  isPrimary?: boolean
 }) {
+  const Title = isPrimary ? 'h1' : 'p'
   return (
     <>
       {/* Title lockup — Est. year sits big and gold on the baseline */}
       <div className="hero-enter flex flex-wrap items-baseline gap-x-5 gap-y-1 mb-4">
-        <h1
+        <Title
+          aria-hidden={!isPrimary}
           className="heading-display text-[clamp(3rem,7vw,5rem)] text-arden-white leading-none"
           style={{ letterSpacing: '-0.02em', textShadow: '0 2px 16px rgba(0,0,0,0.85)' }}
         >
           Arden
-        </h1>
+        </Title>
         <span className="flex items-baseline gap-3">
           <span className="hidden sm:block w-10 h-px bg-arden-accent self-center" aria-hidden="true" />
           <span
@@ -118,7 +124,7 @@ function HeroContent({
             key={s.label}
             href={s.href}
             target="_blank"
-            rel="noopener noreferrer"
+            rel="me noopener noreferrer"
             className="group flex items-center gap-2 text-arden-subtext hover:text-arden-accent transition-colors"
           >
             {s.icon}
@@ -139,9 +145,9 @@ export default async function HomePage() {
     getVisibility(),
   ])
 
-  const estYear = content.estYear || '2022'
-  const heroTagline = content.heroTagline || 'Indie rock from the ground up. Raw energy, honest songs, and a sound that keeps moving.'
-  const bio = content.bio || 'Arden is an indie rock band crafting original music with an honest, lived-in sound. Formed through late-night rehearsals and relentless gigging, the band brings a raw energy to every performance — equal parts careful craft and in-the-moment feeling.'
+  const estYear = content.estYear || '2025'
+  const heroTagline = content.heroTagline || 'Long Island-based jam band. Loose, live, and never the same show twice.'
+  const bio = content.bio || 'Arden is a Long Island jam band blending improvisation with songs you know and songs you will. Formed through late-night rehearsals and relentless gigging, the band brings raw energy to every performance — equal parts careful craft and in-the-moment feeling.'
   const aboutHeading = content.aboutHeading || 'Built on stage,'
   const aboutAccent = content.aboutAccent || 'refined in the room.'
   const newsletterHeading = content.newsletterHeading || 'Get Updates'
@@ -180,7 +186,7 @@ export default async function HomePage() {
     <div className="overflow-x-hidden">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(bandJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(bandJsonLd).replace(/</g, '\\u003c') }}
       />
 
       {/* HERO — the photo carries the ARDEN lettering.
@@ -210,6 +216,7 @@ export default async function HomePage() {
               nextShowLabel={nextShowLabel}
               visibility={visibility}
               socials={socials}
+              isPrimary
             />
           </div>
         </div>
@@ -272,7 +279,7 @@ export default async function HomePage() {
             </h2>
           </div>
           <div>
-            <p className="text-arden-subtext leading-relaxed text-lg">{bio}</p>
+            <p className="text-arden-text leading-relaxed text-lg">{bio}</p>
             <Link
               href="/about"
               className="inline-flex items-center gap-2 mt-6 text-sm text-arden-accent hover:text-arden-white transition-colors uppercase tracking-wider"
@@ -294,7 +301,7 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/media"
-                className="hidden md:flex items-center gap-2 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider"
+                className="flex items-center gap-2 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider flex-shrink-0"
               >
                 All Videos <ArrowRight size={14} />
               </Link>
@@ -352,9 +359,10 @@ export default async function HomePage() {
                     const d = new Date(show.datetime)
                     const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                     return (
-                      <div
+                      <Link
                         key={show.id}
-                        className="group flex items-center justify-between py-5 px-6 bg-arden-surface hover:bg-arden-muted transition-colors cursor-pointer border-l-2 border-transparent hover:border-arden-accent"
+                        href="/shows"
+                        className="group flex items-center justify-between py-5 px-6 bg-arden-surface hover:bg-arden-muted transition-colors border-l-2 border-transparent hover:border-arden-accent"
                       >
                         <div className="flex items-center gap-8">
                           <span className="text-arden-accent font-mono text-sm w-16">{label}</span>
@@ -363,10 +371,10 @@ export default async function HomePage() {
                             <p className="text-arden-subtext text-sm">{show.location}</p>
                           </div>
                         </div>
-                        <Link href="/shows" className="btn-ghost text-xs py-2 px-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                          Info
-                        </Link>
-                      </div>
+                        <span className="text-xs tracking-wider uppercase text-arden-subtext group-hover:text-arden-accent transition-colors flex items-center gap-1.5">
+                          Tickets &amp; Info <ArrowRight size={12} />
+                        </span>
+                      </Link>
                     )
                   })}
                 </div>
@@ -377,21 +385,68 @@ export default async function HomePage() {
                 </div>
               </>
             ) : (
-              <div className="bg-arden-surface border border-arden-border p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                  <p className="text-arden-white text-lg font-medium mb-1">Nothing on the books — yet.</p>
-                  <p className="text-arden-subtext text-sm">
-                    Want Arden at your venue, party, or backyard? We travel well.
-                  </p>
-                </div>
-                <Link href="/about#contact" className="btn-primary flex-shrink-0 self-start md:self-auto">
-                  Book the Band <ArrowRight size={16} />
-                </Link>
+              <div className="py-10 text-center border border-dashed border-arden-border">
+                <p className="text-arden-white font-medium mb-1">Nothing on the books — yet.</p>
+                <p className="text-arden-subtext text-sm">
+                  Join the{' '}
+                  <a href="#updates" className="text-arden-accent hover:text-arden-white transition-colors">
+                    fan list
+                  </a>{' '}
+                  and be first to hear when we announce the next one.
+                </p>
               </div>
             )}
           </div>
         </section>
       )}
+
+      {/* LISTEN — embedded SoundCloud player so visitors can hear the band without leaving */}
+      {soundcloudUrl && (
+        <section className="py-20 px-6 border-t border-arden-border">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-end justify-between mb-12">
+              <div>
+                <p className="section-label mb-3">Listen</p>
+                <h2 className="heading-display text-4xl text-arden-white">On SoundCloud</h2>
+              </div>
+              <a
+                href={soundcloudUrl}
+                target="_blank"
+                rel="me noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider flex-shrink-0"
+              >
+                Full Profile <ArrowRight size={14} />
+              </a>
+            </div>
+            <div className="bg-arden-surface border border-arden-border p-2">
+              <iframe
+                title="Arden on SoundCloud"
+                width="100%"
+                height="400"
+                loading="lazy"
+                allow="autoplay"
+                src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(soundcloudUrl)}&color=%23c8a96e&auto_play=false&show_user=true&show_reposts=false&visual=false`}
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* BOOKING CTA — always visible, not just when the calendar is empty */}
+      <section className="py-14 px-6 border-t border-arden-border">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-arden-surface border border-arden-border p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <p className="section-label mb-2">Bookings</p>
+              <p className="text-arden-white text-lg font-medium mb-1">Want Arden at your venue, party, or backyard?</p>
+              <p className="text-arden-subtext text-sm">Bars, breweries, private events — we travel well and read the room.</p>
+            </div>
+            <Link href="/about#contact" className="btn-primary flex-shrink-0 self-start md:self-auto">
+              Book the Band <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* MERCH TEASER */}
       {visibility.merch && merchItems.length > 0 && (
@@ -427,7 +482,7 @@ export default async function HomePage() {
                   <p className="text-sm font-medium text-arden-text group-hover:text-arden-accent transition-colors">
                     {item.name}
                   </p>
-                  <p className="text-xs text-arden-subtext">${item.price}</p>
+                  <p className="text-xs text-arden-subtext">{fmtMoney(item.price)}</p>
                 </Link>
               ))}
             </div>
