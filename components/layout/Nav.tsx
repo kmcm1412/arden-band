@@ -32,13 +32,19 @@ export default function Nav({ visibility }: { visibility: SectionVisibility }) {
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
         scrolled
           ? 'bg-arden-black/95 backdrop-blur-sm border-b border-arden-border'
-          : 'bg-transparent'
+          : ''
       )}
+      style={
+        scrolled
+          ? undefined
+          : { background: 'linear-gradient(to bottom, rgba(10,10,10,0.9) 0%, rgba(10,10,10,0.55) 70%, transparent 100%)' }
+      }
     >
       <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link
           href="/"
           className="font-display text-xl font-bold tracking-widest text-arden-white hover:text-arden-accent transition-colors"
+          style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}
         >
           ARDEN
         </Link>
@@ -52,8 +58,9 @@ export default function Nav({ visibility }: { visibility: SectionVisibility }) {
                   'text-sm font-medium tracking-wider uppercase transition-colors duration-200',
                   pathname === link.href.split('#')[0]
                     ? 'text-arden-accent'
-                    : 'text-arden-subtext hover:text-arden-text'
+                    : 'text-arden-text/90 hover:text-arden-white'
                 )}
+                style={{ textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}
               >
                 {link.label}
               </Link>
