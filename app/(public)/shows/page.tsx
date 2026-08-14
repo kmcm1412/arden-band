@@ -4,6 +4,7 @@ import { MapPin, ExternalLink } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
 import { getSiteContent } from '@/lib/site-content'
+import { SITE_URL } from '@/lib/site'
 import VenmoTicketWidget from '@/components/VenmoTicketWidget'
 
 export const dynamic = 'force-dynamic'
@@ -82,7 +83,7 @@ export default async function ShowsPage() {
             '@type': 'Offer',
             price: show.ticketPrice,
             priceCurrency: 'USD',
-            url: 'https://ardenjams.netlify.app/shows',
+            url: `${SITE_URL}/shows`,
             availability: 'https://schema.org/InStock',
           },
         }

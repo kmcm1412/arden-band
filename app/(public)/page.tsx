@@ -5,6 +5,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
 import { getMergedVideos } from '@/lib/youtube'
 import { getSiteContent } from '@/lib/site-content'
+import { SITE_URL } from '@/lib/site'
 import { fmtMoney } from '@/lib/utils'
 import SubscribeForm from '@/components/SubscribeForm'
 import LiteYouTube from '@/components/LiteYouTube'
@@ -172,7 +173,7 @@ export default async function HomePage() {
     description: bio,
     genre: 'Jam Band',
     foundingDate: estYear,
-    url: 'https://ardenjams.netlify.app',
+    url: SITE_URL,
     sameAs: [instagramUrl, youtubeUrl, ...(soundcloudUrl ? [soundcloudUrl] : [])],
   }
 
