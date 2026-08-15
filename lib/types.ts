@@ -48,12 +48,18 @@ export interface TicketSale {
   id: string
   /** Buyer / party name */
   name: string
+  /**
+   * Who the tickets are actually for, when that differs from the buyer — a
+   * fan often pays for the whole party. Used at the door for check-in.
+   */
+  ticketNames?: string[]
   /** Number of tickets in this sale */
   qty: number
   method: 'venmo' | 'cash' | 'door' | 'other'
   /** Dollars received for this sale */
   amount: number
   note?: string
+  /** When the money actually arrived — for imports, the Venmo payment time */
   addedAt: string
 }
 
