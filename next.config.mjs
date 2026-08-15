@@ -13,6 +13,17 @@ const nextConfig = {
       { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
     ],
   },
+  async redirects() {
+    return [
+      {
+        // Old address keeps working but lands on the real domain
+        source: '/:path*',
+        has: [{ type: 'host', value: 'ardenjams.netlify.app' }],
+        destination: 'https://ardenband.com/:path*',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       {
