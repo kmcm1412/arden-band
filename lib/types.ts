@@ -34,7 +34,7 @@ export interface Show {
   ticketWidgetMode?: 'full' | 'simple'
   /** @deprecated superseded by ticketNameMode — old boolean kept for back-compat reads */
   ticketNamesRequired?: boolean
-  /** Ticket sales ledger — trackable before and after the show */
+  /** Confirmed ticket sales ledger — the only source the money stats count */
   ticketSales?: TicketSale[]
   /** Post-show numbers, filled in by the band afterwards */
   stats?: ShowStats
@@ -55,6 +55,39 @@ export interface TicketSale {
   amount: number
   note?: string
   addedAt: string
+}
+
+/**
+ * A checkout started from the public Venmo ticket widget.
+ *
+ * Venmo has no webhook or callback for personal accounts, so the app only ever
+ * learns that a fan *started* a payment — never that one settled. Orders are
+ * therefore recorded as 'pending' and stay out of the money totals until an
+ * admin matches them against the real Venmo history and confirms, which is what
+ * mints the TicketSale that the stats actually count.
+ */
+export interface TicketOrder {
+  id?: string
+  showId: string
+  /** Denormalized so the dashboard can show orders without re-reading the show */
+  showVenue: string
+  showDatetime: string
+  /** Ticketholder names ('all' mode) or the single will-call name ('party') */
+  names: string[]
+  nameMode: 'none' | 'party' | 'all'
+  qty: number
+  /** Per-ticket price at checkout time, in dollars */
+  unitPrice: number
+  /** qty x unitPrice, computed server-side — never taken from the client */
+  amount: number
+  /** The exact Venmo note text, for matching against the Venmo transaction list */
+  note: string
+  status: 'pending' | 'confirmed' | 'void'
+  createdAt: string
+  confirmedAt?: string
+  confirmedBy?: string
+  /** id of the TicketSale minted on confirm */
+  saleId?: string
 }
 
 export interface ShowStats {

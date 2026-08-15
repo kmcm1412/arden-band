@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { db } from '@/lib/firebase/client'
 import { collection, getDocs } from 'firebase/firestore'
-import { Show } from '@/lib/types'
+import { Show, TicketOrder } from '@/lib/types'
+import { useAuth } from '@/lib/auth/context'
 import { fmtMoney } from '@/lib/utils'
-import { BarChart3, ChevronRight, MapPin } from 'lucide-react'
+import { BarChart3, ChevronRight, MapPin, Clock } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 
 interface ShowAggregates {
@@ -63,7 +64,9 @@ function StatTile({ label, value, sub }: { label: string; value: string | number
 }
 
 function HistoryPageContent() {
+  const { user } = useAuth()
   const [shows, setShows] = useState<Show[]>([])
+  const [orders, setOrders] = useState<TicketOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -76,6 +79,18 @@ function HistoryPageContent() {
       })
       .finally(() => setLoading(false))
   }, [])
+
+  // Unconfirmed Venmo checkouts, so the page can say what's still unaccounted
+  // for rather than quietly leaving it out of the totals
+  useEffect(() => {
+    if (!user) return
+    user
+      .getIdToken()
+      .then(token => fetch('/api/admin/tickets', { headers: { Authorization: `Bearer ${token}` } }))
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => data && setOrders(data.orders || []))
+      .catch(err => console.error('Failed to load ticket orders:', err))
+  }, [user])
 
   if (loading) return <div className="p-8 text-arden-subtext">Loading...</div>
 
@@ -114,6 +129,42 @@ function HistoryPageContent() {
           sub={daysToNext === null ? 'nothing booked' : daysToNext < 1 ? 'show is today!' : `next in ${daysToNext} day${daysToNext === 1 ? '' : 's'}`}
         />
       </div>
+
+      {/* Unconfirmed checkouts — money that may exist but isn't counted yet */}
+      {(() => {
+        const pending = orders.filter(o => o.status === 'pending')
+        if (pending.length === 0) return null
+        const pendingQty = pending.reduce((n, o) => n + (o.qty || 0), 0)
+        const pendingAmount = pending.reduce((n, o) => n + (o.amount || 0), 0)
+        const byShow = new Map<string, { venue: string; count: number }>()
+        for (const o of pending) {
+          const entry = byShow.get(o.showId) || { venue: o.showVenue, count: 0 }
+          entry.count += 1
+          byShow.set(o.showId, entry)
+        }
+        return (
+          <div className="mb-4 p-4 bg-arden-surface border-l-2 border-yellow-600">
+            <p className="text-yellow-500 text-xs tracking-widest uppercase mb-1.5 flex items-center gap-2">
+              <Clock size={13} /> {pending.length} unconfirmed Venmo checkout{pending.length === 1 ? '' : 's'}
+            </p>
+            <p className="text-arden-text text-sm">
+              {pendingQty} ticket{pendingQty === 1 ? '' : 's'} · {fmtMoney(pendingAmount)} — not counted below
+              until someone checks the Venmo feed and confirms.
+            </p>
+            <div className="flex flex-wrap gap-3 mt-2">
+              {Array.from(byShow.entries()).map(([showId, info]) => (
+                <Link
+                  key={showId}
+                  href={`/dashboard/shows/${showId}`}
+                  className="text-xs text-arden-accent hover:underline"
+                >
+                  {info.venue} ({info.count}) →
+                </Link>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Money totals — appears once any sales or stats are logged */}
       {(() => {

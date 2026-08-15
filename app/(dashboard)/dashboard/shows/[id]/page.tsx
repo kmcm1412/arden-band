@@ -1,16 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { db } from '@/lib/firebase/client'
 import { doc, getDoc, updateDoc, runTransaction } from 'firebase/firestore'
-import { Show, TicketSale, ShowStats } from '@/lib/types'
+import { Show, TicketSale, ShowStats, TicketOrder } from '@/lib/types'
+import { parseVenmoPaste } from '@/lib/tickets'
 import { useAuth } from '@/lib/auth/context'
 import { logActivity } from '@/lib/activity'
 import { formatDateTime, fmtMoney, roundMoney } from '@/lib/utils'
-import { ArrowLeft, Pencil, Plus, Trash2, Ticket, DollarSign, Save } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, Trash2, Ticket, DollarSign, Save, Clock, Check, X, ClipboardPaste } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
+
+const IMPORT_PLACEHOLDER = [
+  '2 tickets - $20 (The Delancey): Kyle, Sam',
+  'Jane Doe, 1, 10',
+].join('\n')
 
 const EMPTY_SALE = { name: '', qty: 1, method: 'venmo' as TicketSale['method'], amount: 0, note: '' }
 const EMPTY_STATS: ShowStats = { attendance: undefined, payout: undefined, costs: undefined, merchSales: undefined, notes: '' }
@@ -36,25 +42,58 @@ function ShowDetailContent() {
   const [statsForm, setStatsForm] = useState<ShowStats>(EMPTY_STATS)
   const [statsSaving, setStatsSaving] = useState(false)
   const [statsSaved, setStatsSaved] = useState(false)
+  const [orders, setOrders] = useState<TicketOrder[]>([])
+  const [ordersError, setOrdersError] = useState('')
+  const [busyOrderId, setBusyOrderId] = useState<string | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
+  const [importText, setImportText] = useState('')
+  const [importing, setImporting] = useState(false)
+
+  const loadShow = useCallback(async () => {
+    if (!params?.id) return
+    const snap = await getDoc(doc(db, 'shows', params.id))
+    if (!snap.exists()) {
+      setError('Show not found.')
+      return
+    }
+    const data = { id: snap.id, ...snap.data() } as Show
+    setShow(data)
+    setStatsForm(prev => (prev === EMPTY_STATS ? { ...EMPTY_STATS, ...(data.stats || {}) } : prev))
+  }, [params?.id])
+
+  // Orders live behind the Admin SDK (they hold fan names), so they come from
+  // the admin API rather than a direct Firestore read
+  const loadOrders = useCallback(async () => {
+    if (!params?.id || !user) return
+    try {
+      const token = await user.getIdToken()
+      const res = await fetch(`/api/admin/tickets?showId=${encodeURIComponent(params.id)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.status === 403 || res.status === 401) return // non-admins just don't see this panel
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setOrders(data.orders || [])
+      setOrdersError('')
+    } catch (err) {
+      console.error('Failed to load ticket orders:', err)
+      setOrdersError('Could not load Venmo checkouts.')
+    }
+  }, [params?.id, user])
 
   useEffect(() => {
     if (!params?.id) return
-    getDoc(doc(db, 'shows', params.id))
-      .then(snap => {
-        if (!snap.exists()) {
-          setError('Show not found.')
-          return
-        }
-        const data = { id: snap.id, ...snap.data() } as Show
-        setShow(data)
-        setStatsForm({ ...EMPTY_STATS, ...(data.stats || {}) })
-      })
+    loadShow()
       .catch(err => {
         console.error('Failed to load show:', err)
         setError('Failed to load show.')
       })
       .finally(() => setLoading(false))
-  }, [params?.id])
+  }, [params?.id, loadShow])
+
+  useEffect(() => {
+    loadOrders()
+  }, [loadOrders])
 
   const sales = show?.ticketSales || []
   const ticketsSold = sales.reduce((sum, s) => sum + (s.qty || 0), 0)
@@ -62,6 +101,7 @@ function ShowDetailContent() {
   const stats = show?.stats || {}
   const net = roundMoney((stats.payout || 0) + (stats.merchSales || 0) + ticketRevenue - (stats.costs || 0))
   const isPast = show ? new Date(show.datetime) <= new Date() : false
+  const pendingOrders = orders.filter(o => o.status === 'pending')
 
   // Transaction: read-modify-write so two admins logging sales at the same
   // time can't clobber each other's entries
@@ -135,6 +175,66 @@ function ShowDetailContent() {
       'removed ticket sale',
       `${sale?.name} (${show?.venue})`
     )
+  }
+
+  /**
+   * Confirming a checkout is what turns it into money: the API appends the
+   * TicketSale server-side, so the show is re-read rather than patched locally.
+   */
+  const actOnOrder = async (order: TicketOrder, action: 'confirm' | 'void' | 'unconfirm') => {
+    if (!user || !order.id) return
+    if (action === 'void' && !confirm(`Dismiss the checkout for ${order.names.join(', ') || 'this fan'}?`)) return
+    setBusyOrderId(order.id)
+    setOrdersError('')
+    try {
+      const token = await user.getIdToken()
+      const res = await fetch('/api/admin/tickets', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ orderId: order.id, action }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `HTTP ${res.status}`)
+      }
+      await Promise.all([loadOrders(), loadShow()])
+      logActivity(
+        user,
+        action === 'confirm' ? 'confirmed Venmo ticket order' : action === 'void' ? 'dismissed Venmo ticket order' : 'reopened Venmo ticket order',
+        `${order.names.join(', ') || 'unnamed'} · ${order.qty} for ${fmtMoney(order.amount)} (${show?.venue})`
+      )
+    } catch (err) {
+      console.error('Order action failed:', err)
+      setOrdersError(err instanceof Error ? err.message : 'Action failed.')
+    } finally {
+      setBusyOrderId(null)
+    }
+  }
+
+  const importPreview = importText.trim() ? parseVenmoPaste(importText) : null
+
+  const runImport = async () => {
+    if (!importPreview || importPreview.rows.length === 0) return
+    setImporting(true)
+    const newSales: TicketSale[] = importPreview.rows.map(r => ({
+      id: genId(),
+      name: r.name,
+      qty: r.qty,
+      method: 'venmo' as const,
+      amount: r.amount,
+      ...(r.note ? { note: r.note } : {}),
+      addedAt: new Date().toISOString(),
+    }))
+    const ok = await persistSales(
+      current => [...current, ...newSales],
+      'imported Venmo ticket sales',
+      `${newSales.length} sale${newSales.length === 1 ? '' : 's'} (${show?.venue})`
+    )
+    setImporting(false)
+    if (ok) {
+      setImportText('')
+      setImportOpen(false)
+    }
   }
 
   const saveStats = async () => {
@@ -221,6 +321,173 @@ function ShowDetailContent() {
           </p>
         </div>
       </div>
+
+      {/* Venmo checkouts — intent captured from the public widget */}
+      {isAdmin && (
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase flex items-center gap-2">
+              <Clock size={14} /> Venmo Checkouts
+              {pendingOrders.length > 0 && (
+                <span className="text-arden-black bg-arden-accent px-1.5 py-0.5 text-[10px] font-mono">
+                  {pendingOrders.length}
+                </span>
+              )}
+            </h2>
+            <button onClick={() => setImportOpen(o => !o)} className="btn-ghost text-xs py-1.5 px-4">
+              <ClipboardPaste size={12} /> Import from Venmo
+            </button>
+          </div>
+          <p className="text-arden-subtext text-xs mb-4 leading-relaxed">
+            Fans who tapped &quot;Pay with Venmo&quot; on the site. Venmo can&apos;t tell the site
+            when a payment actually lands, so these stay out of the totals until you match them
+            against your Venmo feed and confirm.
+          </p>
+
+          {ordersError && (
+            <div className="mb-3 p-3 bg-red-900/20 border border-red-900 text-red-400 text-xs">{ordersError}</div>
+          )}
+
+          {importOpen && (
+            <div className="bg-arden-surface border border-arden-border p-5 mb-4">
+              <label className="text-xs tracking-widest uppercase text-arden-subtext block mb-1">
+                Paste Venmo payments
+              </label>
+              <p className="text-arden-subtext text-xs mb-2 leading-relaxed">
+                One per line. Either a Venmo note (&quot;2 tickets - $20 (The Delancey): Kyle, Sam&quot;)
+                or a plain row (&quot;Kyle McMahon, 2, 20&quot;).
+              </p>
+              <textarea
+                value={importText}
+                onChange={e => setImportText(e.target.value)}
+                rows={5}
+                placeholder={IMPORT_PLACEHOLDER}
+                className="w-full bg-arden-dark border border-arden-border text-arden-text px-3 py-2 text-sm font-mono focus:outline-none focus:border-arden-accent resize-y"
+              />
+              {importPreview && (
+                <div className="mt-3">
+                  {importPreview.rows.length > 0 && (
+                    <div className="space-y-px mb-2">
+                      {importPreview.rows.map((r, i) => (
+                        <div key={i} className="flex items-center gap-3 px-3 py-2 bg-arden-dark border border-arden-border text-sm">
+                          <span className="text-arden-white flex-1 truncate">{r.name}</span>
+                          <span className="text-arden-text font-mono text-xs">{r.qty} tkt{r.qty === 1 ? '' : 's'}</span>
+                          <span className="text-arden-accent font-mono text-xs w-14 text-right">{fmtMoney(r.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {importPreview.skipped.length > 0 && (
+                    <div className="p-3 bg-red-900/10 border border-red-900/40 mb-2">
+                      <p className="text-red-400 text-xs mb-1">
+                        {importPreview.skipped.length} line{importPreview.skipped.length === 1 ? '' : 's'} couldn&apos;t be read and won&apos;t be imported:
+                      </p>
+                      {importPreview.skipped.map((line, i) => (
+                        <p key={i} className="text-arden-subtext text-xs font-mono truncate">{line}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="flex gap-3 mt-3">
+                <button
+                  onClick={runImport}
+                  disabled={importing || !importPreview || importPreview.rows.length === 0}
+                  className="btn-primary text-xs py-2 px-5 disabled:opacity-50"
+                >
+                  {importing
+                    ? 'Importing...'
+                    : `Add ${importPreview?.rows.length || 0} sale${importPreview?.rows.length === 1 ? '' : 's'}`}
+                </button>
+                <button
+                  onClick={() => { setImportOpen(false); setImportText('') }}
+                  className="btn-ghost text-xs py-2 px-5"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {orders.length === 0 ? (
+            <p className="text-arden-subtext text-sm py-6 text-center border border-dashed border-arden-border">
+              No Venmo checkouts recorded for this show yet.
+            </p>
+          ) : (
+            <div className="space-y-px">
+              {orders.map(order => (
+                <div
+                  key={order.id}
+                  className={`flex items-center gap-4 p-3.5 bg-arden-surface border ${
+                    order.status === 'pending' ? 'border-arden-accent/40' : 'border-arden-border'
+                  } ${order.status === 'void' ? 'opacity-50' : ''}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-arden-white text-sm font-medium truncate">
+                      {order.names.length > 0 ? order.names.join(', ') : 'No name given'}
+                    </p>
+                    <p className="text-arden-subtext text-xs truncate">
+                      {new Date(order.createdAt).toLocaleString('en-US', {
+                        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                      })}
+                      {' · '}
+                      <span className="font-mono">{order.note}</span>
+                    </p>
+                  </div>
+                  <span className="text-arden-text text-sm font-mono flex-shrink-0">
+                    {order.qty} tkt{order.qty === 1 ? '' : 's'}
+                  </span>
+                  <span className="text-arden-accent text-sm font-mono flex-shrink-0 w-14 text-right">
+                    {fmtMoney(order.amount)}
+                  </span>
+                  <span
+                    className={`text-[10px] tracking-wider uppercase px-2 py-0.5 border flex-shrink-0 ${
+                      order.status === 'confirmed'
+                        ? 'border-arden-accent/40 text-arden-accent'
+                        : order.status === 'void'
+                          ? 'border-arden-border text-arden-subtext'
+                          : 'border-yellow-700 text-yellow-500'
+                    }`}
+                  >
+                    {order.status === 'pending' ? 'unconfirmed' : order.status}
+                  </span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {order.status === 'pending' ? (
+                      <>
+                        <button
+                          onClick={() => actOnOrder(order, 'confirm')}
+                          disabled={busyOrderId === order.id}
+                          title="Payment received — add to ticket sales"
+                          className="text-arden-subtext hover:text-arden-accent transition-colors disabled:opacity-40"
+                        >
+                          <Check size={15} />
+                        </button>
+                        <button
+                          onClick={() => actOnOrder(order, 'void')}
+                          disabled={busyOrderId === order.id}
+                          title="Never paid — dismiss"
+                          className="text-arden-subtext hover:text-red-400 transition-colors disabled:opacity-40"
+                        >
+                          <X size={15} />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => actOnOrder(order, 'unconfirm')}
+                        disabled={busyOrderId === order.id}
+                        title="Undo — pull back out of ticket sales"
+                        className="text-arden-subtext hover:text-arden-accent transition-colors text-xs uppercase tracking-wider disabled:opacity-40"
+                      >
+                        Undo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Ticket sales ledger */}
       <div className="mb-10">

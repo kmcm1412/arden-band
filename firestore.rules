@@ -100,6 +100,13 @@ service cloud.firestore {
       allow read, delete: if false; // Admin SDK only
     }
 
+    // Ticket orders: written by the public checkout API and read by the
+    // dashboard, both through the Admin SDK. Fan names live here, so no client
+    // ever touches this collection directly.
+    match /ticketOrders/{orderId} {
+      allow read, write: if false; // Admin SDK only
+    }
+
     // Pending invitations: server-side only
     match /pendingInvitations/{email} {
       allow read, write: if false; // Admin SDK only

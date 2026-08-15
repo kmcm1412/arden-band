@@ -6,6 +6,7 @@ import { getVisibility } from '@/lib/visibility'
 import { getSiteContent } from '@/lib/site-content'
 import { SITE_URL } from '@/lib/site'
 import VenmoTicketWidget from '@/components/VenmoTicketWidget'
+import { resolveNameMode } from '@/lib/tickets'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -158,8 +159,9 @@ export default async function ShowsPage() {
 
                     {show.ticketPrice && show.ticketPrice > 0 ? (
                       <VenmoTicketWidget
+                        showId={show.id}
                         price={show.ticketPrice}
-                        nameMode={show.ticketNameMode || (show.ticketNamesRequired ? 'all' : 'none')}
+                        nameMode={resolveNameMode(show)}
                         venue={show.venue}
                         simple={show.ticketWidgetMode === 'simple'}
                       />

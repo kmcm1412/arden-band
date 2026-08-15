@@ -3,11 +3,11 @@
 import { useState } from 'react'
 import { Minus, Plus, ExternalLink } from 'lucide-react'
 import { fmtMoney, roundMoney } from '@/lib/utils'
+import { buildVenmoNote, MAX_TICKETS, type TicketNameMode } from '@/lib/tickets'
 
 const VENMO_USER = 'ardenjams'
-const MAX_TICKETS = 10
 
-export type TicketNameMode = 'none' | 'party' | 'all'
+export type { TicketNameMode }
 
 /**
  * Prefilled-Venmo ticket checkout: fans pick a quantity (and a name or names,
@@ -19,11 +19,14 @@ export type TicketNameMode = 'none' | 'party' | 'all'
  * quantity stepper.
  */
 export default function VenmoTicketWidget({
+  showId,
   price,
   nameMode,
   venue,
   simple = false,
 }: {
+  /** Firestore show id — the checkout record is filed against it */
+  showId: string
   price: number
   nameMode: TicketNameMode
   venue: string
@@ -56,13 +59,9 @@ export default function VenmoTicketWidget({
         ? filledNames.length < qty
         : false
 
-  const nameSuffix =
-    nameMode === 'party' && partyName.trim()
-      ? ` — under ${partyName.trim()}`
-      : nameMode === 'all' && filledNames.length > 0
-        ? `: ${filledNames.join(', ')}`
-        : ''
-  const note = `${qty} ticket${qty === 1 ? '' : 's'} - ${fmtMoney(total)} (${venue})${nameSuffix}`
+  // Names the band will need at the door: one for the whole party, or one each
+  const checkoutNames = nameMode === 'party' ? [partyName.trim()].filter(Boolean) : filledNames
+  const note = buildVenmoNote({ qty, total, venue, nameMode, names: checkoutNames })
   const encNote = encodeURIComponent(note)
 
   // The legacy venmo.com/<user>?txn=pay format dead-ends in a redirect loop.
@@ -71,9 +70,30 @@ export default function VenmoTicketWidget({
   const appUrl = `venmo://paycharge?txn=pay&recipients=${VENMO_USER}&amount=${total}&note=${encNote}`
   const webUrl = `https://account.venmo.com/payment-link?audience=private&txn=pay&recipients=${VENMO_USER}&amount=${total}&note=${encNote}`
 
+  /**
+   * Files the checkout with the band before the browser leaves for Venmo.
+   *
+   * keepalive lets the request outlive the navigation that fires a beat later —
+   * without it the record dies with the page. Failures are swallowed on
+   * purpose: a bookkeeping problem must never cost the band a sale.
+   */
+  const recordCheckout = () => {
+    try {
+      fetch('/api/tickets/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ showId, qty, names: checkoutNames }),
+        keepalive: true,
+      }).catch(() => {})
+    } catch {
+      /* never block the payment */
+    }
+  }
+
   const openVenmo = (e: React.MouseEvent) => {
     e.preventDefault()
     if (namesMissing) return
+    recordCheckout()
     const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent)
     if (isMobile) {
       // Try the app first; if it doesn't take over the screen within ~1.5s
