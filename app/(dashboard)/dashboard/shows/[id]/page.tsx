@@ -10,8 +10,9 @@ import { parseVenmoPaste } from '@/lib/tickets'
 import { useAuth } from '@/lib/auth/context'
 import { logActivity } from '@/lib/activity'
 import { formatDateTime, fmtMoney, roundMoney } from '@/lib/utils'
-import { ArrowLeft, Pencil, Plus, Trash2, Ticket, DollarSign, Save, Clock, Check, X, ClipboardPaste } from 'lucide-react'
+import { ArrowLeft, Plus, Ticket, DollarSign, Save, Clock, ClipboardPaste } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
+import { SaleRow, OrderRow, useExpandedRow } from '@/components/dashboard/TicketRows'
 
 const IMPORT_PLACEHOLDER = [
   '2 tickets - $20 (The Delancey): Kyle, Sam',
@@ -48,6 +49,8 @@ function ShowDetailContent() {
   const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState('')
   const [importing, setImporting] = useState(false)
+  // One row open at a time across both lists — opening a row closes the other
+  const { expandedKey, toggleRow } = useExpandedRow()
 
   const loadShow = useCallback(async () => {
     if (!params?.id) return
@@ -94,6 +97,7 @@ function ShowDetailContent() {
   useEffect(() => {
     loadOrders()
   }, [loadOrders])
+
 
   const sales = show?.ticketSales || []
   const ticketsSold = sales.reduce((sum, s) => sum + (s.qty || 0), 0)
@@ -271,8 +275,6 @@ function ShowDetailContent() {
     )
   }
 
-  const d = new Date(show.datetime)
-
   return (
     <div className="p-6 md:p-8 max-w-4xl mx-auto">
       <Link
@@ -416,73 +418,14 @@ function ShowDetailContent() {
           ) : (
             <div className="space-y-px">
               {orders.map(order => (
-                <div
+                <OrderRow
                   key={order.id}
-                  className={`flex items-center gap-4 p-3.5 bg-arden-surface border ${
-                    order.status === 'pending' ? 'border-arden-accent/40' : 'border-arden-border'
-                  } ${order.status === 'void' ? 'opacity-50' : ''}`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-arden-white text-sm font-medium truncate">
-                      {order.names.length > 0 ? order.names.join(', ') : 'No name given'}
-                    </p>
-                    <p className="text-arden-subtext text-xs truncate">
-                      {new Date(order.createdAt).toLocaleString('en-US', {
-                        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-                      })}
-                      {' · '}
-                      <span className="font-mono">{order.note}</span>
-                    </p>
-                  </div>
-                  <span className="text-arden-text text-sm font-mono flex-shrink-0">
-                    {order.qty} tkt{order.qty === 1 ? '' : 's'}
-                  </span>
-                  <span className="text-arden-accent text-sm font-mono flex-shrink-0 w-14 text-right">
-                    {fmtMoney(order.amount)}
-                  </span>
-                  <span
-                    className={`text-[10px] tracking-wider uppercase px-2 py-0.5 border flex-shrink-0 ${
-                      order.status === 'confirmed'
-                        ? 'border-arden-accent/40 text-arden-accent'
-                        : order.status === 'void'
-                          ? 'border-arden-border text-arden-subtext'
-                          : 'border-yellow-700 text-yellow-500'
-                    }`}
-                  >
-                    {order.status === 'pending' ? 'unconfirmed' : order.status}
-                  </span>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {order.status === 'pending' ? (
-                      <>
-                        <button
-                          onClick={() => actOnOrder(order, 'confirm')}
-                          disabled={busyOrderId === order.id}
-                          title="Payment received — add to ticket sales"
-                          className="text-arden-subtext hover:text-arden-accent transition-colors disabled:opacity-40"
-                        >
-                          <Check size={15} />
-                        </button>
-                        <button
-                          onClick={() => actOnOrder(order, 'void')}
-                          disabled={busyOrderId === order.id}
-                          title="Never paid — dismiss"
-                          className="text-arden-subtext hover:text-red-400 transition-colors disabled:opacity-40"
-                        >
-                          <X size={15} />
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => actOnOrder(order, 'unconfirm')}
-                        disabled={busyOrderId === order.id}
-                        title="Undo — pull back out of ticket sales"
-                        className="text-arden-subtext hover:text-arden-accent transition-colors text-xs uppercase tracking-wider disabled:opacity-40"
-                      >
-                        Undo
-                      </button>
-                    )}
-                  </div>
-                </div>
+                  order={order}
+                  open={expandedKey === `order:${order.id}`}
+                  onToggle={() => toggleRow(`order:${order.id}`)}
+                  busy={busyOrderId === order.id}
+                  onAct={action => actOnOrder(order, action)}
+                />
               ))}
             </div>
           )}
@@ -589,33 +532,15 @@ function ShowDetailContent() {
         ) : (
           <div className="space-y-px">
             {sales.map(sale => (
-              <div key={sale.id} className="flex items-center gap-4 p-3.5 bg-arden-surface border border-arden-border">
-                <div className="flex-1 min-w-0">
-                  <p className="text-arden-white text-sm font-medium truncate">{sale.name}</p>
-                  {sale.note && <p className="text-arden-subtext text-xs truncate">{sale.note}</p>}
-                </div>
-                <span className="text-arden-subtext text-xs uppercase tracking-wider flex-shrink-0">{sale.method}</span>
-                <span className="text-arden-text text-sm font-mono flex-shrink-0">{sale.qty} tkt{sale.qty === 1 ? '' : 's'}</span>
-                <span className="text-arden-accent text-sm font-mono flex-shrink-0 w-14 text-right">{fmtMoney(sale.amount)}</span>
-                {isAdmin && (
-                  <>
-                    <button
-                      onClick={() => startEditSale(sale)}
-                      className="text-arden-subtext hover:text-arden-accent transition-colors flex-shrink-0"
-                      title="Edit sale"
-                    >
-                      <Pencil size={13} />
-                    </button>
-                    <button
-                      onClick={() => removeSale(sale.id)}
-                      className="text-arden-subtext hover:text-red-400 transition-colors flex-shrink-0"
-                      title="Remove sale"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </>
-                )}
-              </div>
+              <SaleRow
+                key={sale.id}
+                sale={sale}
+                open={expandedKey === `sale:${sale.id}`}
+                onToggle={() => toggleRow(`sale:${sale.id}`)}
+                isAdmin={isAdmin}
+                onEdit={() => startEditSale(sale)}
+                onRemove={() => removeSale(sale.id)}
+              />
             ))}
           </div>
         )}

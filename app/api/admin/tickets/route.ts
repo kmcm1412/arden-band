@@ -80,11 +80,15 @@ export async function PATCH(req: NextRequest) {
         const sale: TicketSale = {
           id: genId(),
           name: order.names.length > 0 ? order.names.join(', ') : 'Venmo checkout',
+          // Kept structured so the door list survives, not just the joined label
+          ...(order.names.length > 0 ? { ticketNames: order.names } : {}),
           qty: order.qty,
           method: 'venmo',
           amount: order.amount,
           note: `Venmo checkout — "${order.note}"`,
-          addedAt: new Date().toISOString(),
+          // The purchase happened at checkout; confirming is just when an admin
+          // got round to verifying it against the Venmo feed
+          addedAt: order.createdAt || new Date().toISOString(),
         }
         if (showSnap.exists) txn.update(showRef, { ticketSales: [...sales, sale] })
         txn.update(orderRef, {
