@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react'
 import type { TicketSale, TicketOrder } from '@/lib/types'
-import { fmtMoney, formatDateTime } from '@/lib/utils'
+import { fmtMoney, formatDateTime, formatInEastern } from '@/lib/utils'
 
 /**
  * Single-open row state shared by both ticket lists: tapping the open row,
@@ -243,7 +243,7 @@ export function OrderRow({
               <span className="sm:hidden">
                 {order.qty} tkt{order.qty === 1 ? '' : 's'} ·{' '}
               </span>
-              {new Date(order.createdAt).toLocaleString('en-US', {
+              {formatInEastern(order.createdAt, {
                 month: 'short',
                 day: 'numeric',
                 hour: 'numeric',

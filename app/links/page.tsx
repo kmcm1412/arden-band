@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { adminDb } from '@/lib/firebase/admin'
+import { parseShowDate, formatInEastern } from '@/lib/utils'
 import { getVisibility } from '@/lib/visibility'
 import { getSiteContent } from '@/lib/site-content'
 import { SoundCloudIcon, YouTubeIcon, InstagramIcon } from '@/components/BrandIcons'
@@ -24,8 +25,8 @@ async function getNextShow() {
     const now = new Date()
     const upcoming = snap.docs
       .map(d => d.data() as { datetime?: string; venue?: string; isPublic?: boolean; status?: string })
-      .filter(s => s.isPublic && s.status !== 'cancelled' && s.datetime && new Date(s.datetime) > now)
-      .sort((a, b) => new Date(a.datetime!).getTime() - new Date(b.datetime!).getTime())
+      .filter(s => s.isPublic && s.status !== 'cancelled' && s.datetime && parseShowDate(s.datetime) > now)
+      .sort((a, b) => parseShowDate(a.datetime!).getTime() - parseShowDate(b.datetime!).getTime())
     return upcoming[0] || null
   } catch {
     return null
@@ -87,7 +88,7 @@ export default async function LinksPage() {
             <span className="flex-1 text-left">
               <span className="block text-arden-accent group-hover:text-arden-black font-semibold tracking-wide transition-colors">
                 Next Show ·{' '}
-                {new Date(nextShow.datetime!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {formatInEastern(nextShow.datetime, { month: 'short', day: 'numeric' })}
               </span>
               <span className="block text-arden-subtext group-hover:text-arden-black/70 text-xs mt-0.5 transition-colors">
                 {nextShow.venue} — tickets & info

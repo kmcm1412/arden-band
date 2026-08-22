@@ -9,7 +9,7 @@ import { Show, TicketSale, ShowStats, TicketOrder } from '@/lib/types'
 import { parseVenmoPaste } from '@/lib/tickets'
 import { useAuth } from '@/lib/auth/context'
 import { logActivity } from '@/lib/activity'
-import { formatDateTime, fmtMoney, roundMoney } from '@/lib/utils'
+import { formatDateTime, fmtMoney, roundMoney, parseShowDate } from '@/lib/utils'
 import { ArrowLeft, Plus, Ticket, DollarSign, Save, Clock, ClipboardPaste } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 import { SaleRow, OrderRow, useExpandedRow } from '@/components/dashboard/TicketRows'
@@ -106,7 +106,7 @@ function ShowDetailContent() {
   const ticketRevenue = roundMoney(sales.reduce((sum, s) => sum + (s.amount || 0), 0))
   const stats = show?.stats || {}
   const net = roundMoney((stats.payout || 0) + (stats.merchSales || 0) + ticketRevenue - (stats.costs || 0))
-  const isPast = show ? new Date(show.datetime) <= new Date() : false
+  const isPast = show ? parseShowDate(show.datetime) <= new Date() : false
   const pendingOrders = orders.filter(o => o.status === 'pending')
   // Undefined means enabled: shows created before the toggle keep selling
   const ticketSalesEnabled = show?.ticketSalesEnabled !== false

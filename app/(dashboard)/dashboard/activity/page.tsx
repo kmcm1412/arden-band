@@ -6,13 +6,14 @@ import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestor
 import { History } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 import type { ActivityEntry } from '@/lib/activity'
+import { formatInEastern, formatDateTime } from '@/lib/utils'
 
 function timeAgo(iso: string) {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
   if (s < 60) return 'just now'
   if (s < 3600) return `${Math.floor(s / 60)}m ago`
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  return formatInEastern(iso, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
 function ActivityPageContent() {
@@ -59,7 +60,7 @@ function ActivityPageContent() {
                 {e.action}
                 {e.detail && <span className="text-arden-subtext"> — {e.detail}</span>}
               </span>
-              <span className="ml-auto text-arden-border text-xs font-mono flex-shrink-0" title={new Date(e.at).toLocaleString()}>
+              <span className="ml-auto text-arden-border text-xs font-mono flex-shrink-0" title={formatDateTime(e.at)}>
                 {timeAgo(e.at)}
               </span>
             </div>

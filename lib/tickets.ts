@@ -1,4 +1,4 @@
-import { fmtMoney, roundMoney, formatDateTime } from '@/lib/utils'
+import { fmtMoney, roundMoney, formatDateTime, toEasternIso } from '@/lib/utils'
 import type { TicketSale } from '@/lib/types'
 
 export type TicketNameMode = 'none' | 'party' | 'all'
@@ -272,11 +272,8 @@ export function guestListFilename(venue: string, datetime?: string): string {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'show'
-  // Local date parts, not toISOString(): an 8pm ET show is already tomorrow in UTC
-  const d = datetime ? new Date(datetime) : null
-  const day =
-    d && !Number.isNaN(d.getTime())
-      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      : ''
+  // Eastern date parts: an 8pm ET show is already tomorrow in UTC, and the
+  // filename should read as the night the band played
+  const day = datetime ? toEasternIso(datetime).slice(0, 10) : ''
   return `${slug}-guest-list${day ? `-${day}` : ''}.txt`
 }

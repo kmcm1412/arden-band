@@ -7,6 +7,7 @@ import { getSiteContent } from '@/lib/site-content'
 import { SITE_URL } from '@/lib/site'
 import VenmoTicketWidget from '@/components/VenmoTicketWidget'
 import { resolveNameMode } from '@/lib/tickets'
+import { parseShowDate, formatInEastern, toEasternIso } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -34,20 +35,22 @@ async function getShows() {
         isPublic: boolean
       })
       .filter(s => s.isPublic)
-      .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
+      .sort((a, b) => parseShowDate(a.datetime).getTime() - parseShowDate(b.datetime).getTime())
   } catch (err) {
     console.error('[shows] Failed to fetch shows:', err)
     return []
   }
 }
 
+// Every part is rendered in Eastern Time, so a UTC server and an ET browser
+// print the same date for the same show
 function formatShowDate(dateStr: string) {
-  const d = new Date(dateStr)
   return {
-    month: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-    day: d.getDate().toString().padStart(2, '0'),
-    time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-    full: d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
+    month: formatInEastern(dateStr, { month: 'short' }).toUpperCase(),
+    day: formatInEastern(dateStr, { day: '2-digit' }),
+    year: formatInEastern(dateStr, { year: 'numeric' }),
+    time: formatInEastern(dateStr, { hour: 'numeric', minute: '2-digit' }),
+    full: formatInEastern(dateStr, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
   }
 }
 
@@ -57,8 +60,8 @@ export default async function ShowsPage() {
 
   const [shows, content] = await Promise.all([getShows(), getSiteContent()])
   const now = new Date()
-  const upcoming = shows.filter(s => new Date(s.datetime) > now)
-  const past = shows.filter(s => new Date(s.datetime) <= now)
+  const upcoming = shows.filter(s => parseShowDate(s.datetime) > now)
+  const past = shows.filter(s => parseShowDate(s.datetime) <= now)
   const instagramUrl = content.instagramUrl || 'https://www.instagram.com/ardenjams'
   const instagramHandle = content.instagramHandle || '@ardenjams'
   const showsEmptyMessage = content.showsEmptyMessage || 'No upcoming shows announced.'
@@ -68,7 +71,7 @@ export default async function ShowsPage() {
     '@context': 'https://schema.org',
     '@type': 'MusicEvent',
     name: `Arden at ${show.venue}`,
-    startDate: show.datetime,
+    startDate: toEasternIso(show.datetime),
     location: {
       '@type': 'Place',
       name: show.venue,
@@ -212,7 +215,7 @@ export default async function ShowsPage() {
                 return (
                   <div key={show.id} className="flex items-center gap-6 py-3 opacity-60">
                     <span className="text-arden-subtext font-mono text-sm w-28 flex-shrink-0">
-                      {d.month} {d.day}, {new Date(show.datetime).getFullYear()}
+                      {d.month} {d.day}, {d.year}
                     </span>
                     <span className="text-arden-text">{show.venue}</span>
                     <span className="text-arden-subtext text-sm">{show.location}</span>

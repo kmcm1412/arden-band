@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth/context'
 import { db } from '@/lib/firebase/client'
+import { parseShowDate } from '@/lib/utils'
 import { collection, getDocs } from 'firebase/firestore'
 import { Music, Calendar, ListMusic, Users, Megaphone, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
@@ -51,8 +52,8 @@ export default function DashboardOverview() {
           .map(d => d.data() as { datetime?: string; status?: string })
           .filter(s => s.datetime && s.status !== 'cancelled')
         setQuickStats({
-          played: shows.filter(s => new Date(s.datetime!) <= now).length,
-          upcoming: shows.filter(s => new Date(s.datetime!) > now).length,
+          played: shows.filter(s => parseShowDate(s.datetime) <= now).length,
+          upcoming: shows.filter(s => parseShowDate(s.datetime) > now).length,
         })
       })
       .catch(() => {})

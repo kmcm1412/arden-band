@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase/client'
 import { collection, getDocs } from 'firebase/firestore'
 import { Show, TicketOrder } from '@/lib/types'
 import { useAuth } from '@/lib/auth/context'
-import { fmtMoney } from '@/lib/utils'
+import { fmtMoney, parseShowDate, formatInEastern } from '@/lib/utils'
 import { BarChart3, ChevronRight, MapPin, Clock } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 
@@ -25,13 +25,16 @@ function computeStats(shows: Show[]): ShowAggregates {
   const now = new Date()
   const active = shows.filter(s => s.status !== 'cancelled' && s.datetime)
   const past = active
-    .filter(s => new Date(s.datetime) <= now)
-    .sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())
+    .filter(s => parseShowDate(s.datetime) <= now)
+    .sort((a, b) => parseShowDate(b.datetime).getTime() - parseShowDate(a.datetime).getTime())
   const future = active
-    .filter(s => new Date(s.datetime) > now)
-    .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
+    .filter(s => parseShowDate(s.datetime) > now)
+    .sort((a, b) => parseShowDate(a.datetime).getTime() - parseShowDate(b.datetime).getTime())
 
-  const year = now.getFullYear()
+  // "This year" means the Eastern calendar year, so a New Year's Eve show
+  // doesn't jump years depending on who is looking
+  const showYear = (s: Show) => Number(formatInEastern(s.datetime, { year: 'numeric' }))
+  const year = Number(formatInEastern(now.toISOString(), { year: 'numeric' }))
   const venueCounts = new Map<string, number>()
   for (const s of past) {
     venueCounts.set(s.venue, (venueCounts.get(s.venue) || 0) + 1)
@@ -44,8 +47,8 @@ function computeStats(shows: Show[]): ShowAggregates {
   return {
     played: past.length,
     upcoming: future.length,
-    thisYear: past.filter(s => new Date(s.datetime).getFullYear() === year).length,
-    lastYear: past.filter(s => new Date(s.datetime).getFullYear() === year - 1).length,
+    thisYear: past.filter(s => showYear(s) === year).length,
+    lastYear: past.filter(s => showYear(s) === year - 1).length,
     uniqueVenues: venueCounts.size,
     topVenue,
     firstShow: past[past.length - 1] || null,
@@ -97,14 +100,14 @@ function HistoryPageContent() {
   const stats = computeStats(shows)
   const now = new Date()
   const past = shows
-    .filter(s => s.datetime && new Date(s.datetime) <= now)
-    .sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())
+    .filter(s => s.datetime && parseShowDate(s.datetime) <= now)
+    .sort((a, b) => parseShowDate(b.datetime).getTime() - parseShowDate(a.datetime).getTime())
 
   const nextShowLabel = stats.nextShow
-    ? `${new Date(stats.nextShow.datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${stats.nextShow.venue}`
+    ? `${formatInEastern(stats.nextShow.datetime, { month: 'short', day: 'numeric' })} · ${stats.nextShow.venue}`
     : '—'
   const daysToNext = stats.nextShow
-    ? Math.ceil((new Date(stats.nextShow.datetime).getTime() - now.getTime()) / 86400000)
+    ? Math.ceil((parseShowDate(stats.nextShow.datetime).getTime() - now.getTime()) / 86400000)
     : null
 
   return (
@@ -120,7 +123,7 @@ function HistoryPageContent() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <StatTile label="Shows Played" value={stats.played} sub={stats.firstShow ? `since ${new Date(stats.firstShow.datetime).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : undefined} />
+        <StatTile label="Shows Played" value={stats.played} sub={stats.firstShow ? `since ${formatInEastern(stats.firstShow.datetime, { month: 'short', year: 'numeric' })}` : undefined} />
         <StatTile label={`Played ${now.getFullYear()}`} value={stats.thisYear} sub={stats.lastYear > 0 ? `${stats.lastYear} last year` : undefined} />
         <StatTile label="Venues Hit" value={stats.uniqueVenues} sub={stats.topVenue && stats.topVenue.count > 1 ? `most: ${stats.topVenue.name} (${stats.topVenue.count}x)` : undefined} />
         <StatTile
@@ -210,7 +213,6 @@ function HistoryPageContent() {
         ) : (
           <div className="space-y-2">
             {past.map(show => {
-              const d = new Date(show.datetime)
               const sold = (show.ticketSales || []).reduce((n, t) => n + (t.qty || 0), 0)
               return (
                 <Link
@@ -222,12 +224,14 @@ function HistoryPageContent() {
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="flex-shrink-0 text-center w-12">
                         <p className="text-arden-accent font-mono text-xs uppercase">
-                          {d.toLocaleDateString('en-US', { month: 'short' })}
+                          {formatInEastern(show.datetime, { month: 'short' })}
                         </p>
                         <p className="text-arden-white font-display font-bold text-xl leading-none">
-                          {d.getDate()}
+                          {formatInEastern(show.datetime, { day: 'numeric' })}
                         </p>
-                        <p className="text-arden-border text-[10px] font-mono">{d.getFullYear()}</p>
+                        <p className="text-arden-border text-[10px] font-mono">
+                          {formatInEastern(show.datetime, { year: 'numeric' })}
+                        </p>
                       </div>
                       <div className="min-w-0">
                         <p className="text-arden-white font-medium truncate">{show.venue}</p>

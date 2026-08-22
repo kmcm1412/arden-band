@@ -6,6 +6,7 @@ import {
   collection, getDocs, updateDoc, deleteDoc, doc, orderBy, query
 } from 'firebase/firestore'
 import { ContactMessage } from '@/lib/types'
+import { formatInEastern } from '@/lib/utils'
 import { Mail, MailOpen, Trash2 } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 import { useAuth } from '@/lib/auth/context'
@@ -113,7 +114,7 @@ function MessagesPageContent() {
                 </span>
                 {msg.createdAt && (
                   <span className="text-arden-border text-xs font-mono flex-shrink-0">
-                    {new Date(msg.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {formatInEastern(msg.createdAt, { month: 'short', day: 'numeric' })}
                   </span>
                 )}
               </button>

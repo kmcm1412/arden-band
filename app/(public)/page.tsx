@@ -2,6 +2,7 @@ import Link from 'next/link'
 /* eslint-disable @next/next/no-img-element */
 import { ArrowRight, ChevronDown } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
+import { parseShowDate, formatInEastern } from '@/lib/utils'
 import { getVisibility } from '@/lib/visibility'
 import { getMergedVideos } from '@/lib/youtube'
 import { getSiteContent } from '@/lib/site-content'
@@ -34,8 +35,8 @@ async function getUpcomingShows(limit = 3) {
     const now = new Date()
     return snap.docs
       .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as { id: string; datetime: string; venue: string; location: string; isPublic: boolean })
-      .filter(s => s.isPublic && new Date(s.datetime) > now)
-      .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
+      .filter(s => s.isPublic && parseShowDate(s.datetime) > now)
+      .sort((a, b) => parseShowDate(a.datetime).getTime() - parseShowDate(b.datetime).getTime())
       .slice(0, limit)
   } catch (err) {
     console.error('[home] Failed to fetch upcoming shows:', err)
@@ -163,7 +164,7 @@ export default async function HomePage() {
 
   const nextShow = upcomingShows[0]
   const nextShowLabel = nextShow
-    ? `${new Date(nextShow.datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${nextShow.venue}`
+    ? `${formatInEastern(nextShow.datetime, { month: 'short', day: 'numeric' })} · ${nextShow.venue}`
     : ''
 
   const bandJsonLd = {
@@ -357,8 +358,7 @@ export default async function HomePage() {
               <>
                 <div className="space-y-px">
                   {upcomingShows.map((show) => {
-                    const d = new Date(show.datetime)
-                    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    const label = formatInEastern(show.datetime, { month: 'short', day: 'numeric' })
                     return (
                       <Link
                         key={show.id}
