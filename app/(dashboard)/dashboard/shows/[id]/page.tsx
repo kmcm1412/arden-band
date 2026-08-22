@@ -5,8 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { db } from '@/lib/firebase/client'
 import { doc, getDoc, updateDoc, runTransaction } from 'firebase/firestore'
-import { Show, TicketSale, ShowStats, TicketOrder } from '@/lib/types'
-import { parseVenmoPaste } from '@/lib/tickets'
+import { Show, TicketSale, ShowStats, TicketOrder, ShowExpense } from '@/lib/types'
+import { parseVenmoPaste, showFinancials } from '@/lib/tickets'
 import { useAuth } from '@/lib/auth/context'
 import { logActivity } from '@/lib/activity'
 import { formatDateTime, fmtMoney, roundMoney, parseShowDate } from '@/lib/utils'
@@ -14,6 +14,7 @@ import { ArrowLeft, Plus, Ticket, DollarSign, Save, Clock, ClipboardPaste } from
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 import { SaleRow, OrderRow, useExpandedRow } from '@/components/dashboard/TicketRows'
 import { GuestListExport, TicketSalesToggle } from '@/components/dashboard/TicketControls'
+import ShowExpenses from '@/components/dashboard/ShowExpenses'
 
 const IMPORT_PLACEHOLDER = [
   '2 tickets - $20 (The Delancey): Kyle, Sam',
@@ -53,6 +54,7 @@ function ShowDetailContent() {
   // One row open at a time across both lists — opening a row closes the other
   const { expandedKey, toggleRow } = useExpandedRow()
   const [salesToggleBusy, setSalesToggleBusy] = useState(false)
+  const [expensesBusy, setExpensesBusy] = useState(false)
 
   const loadShow = useCallback(async () => {
     if (!params?.id) return
@@ -102,14 +104,35 @@ function ShowDetailContent() {
 
 
   const sales = show?.ticketSales || []
-  const ticketsSold = sales.reduce((sum, s) => sum + (s.qty || 0), 0)
-  const ticketRevenue = roundMoney(sales.reduce((sum, s) => sum + (s.amount || 0), 0))
+  const expenses = show?.expenses || []
   const stats = show?.stats || {}
-  const net = roundMoney((stats.payout || 0) + (stats.merchSales || 0) + ticketRevenue - (stats.costs || 0))
+  // One shared calculation, so this page and the history page can't disagree
+  const money = showFinancials({ ticketSales: sales, expenses, stats })
+  const { ticketsSold, ticketRevenue } = money
   const isPast = show ? parseShowDate(show.datetime) <= new Date() : false
   const pendingOrders = orders.filter(o => o.status === 'pending')
   // Undefined means enabled: shows created before the toggle keep selling
   const ticketSalesEnabled = show?.ticketSalesEnabled !== false
+
+  // Saved on edit rather than behind a save button, matching the sales toggle
+  const persistExpenses = async (next: ShowExpense[]) => {
+    if (!show?.id) return
+    setExpensesBusy(true)
+    setError('')
+    try {
+      await updateDoc(doc(db, 'shows', show.id), { expenses: next })
+      setShow(s => (s ? { ...s, expenses: next } : s))
+      const total = next.reduce((n, e) => n + (e.amount || 0), 0)
+      logActivity(user, 'updated show expenses', `${show.venue} · ${fmtMoney(total)} deducted`)
+    } catch (err) {
+      console.error('Failed to save expenses:', err)
+      setError('Could not save expenses. Are you an admin?')
+      // Put back what Firestore actually holds so the rows don't lie
+      loadShow().catch(() => {})
+    } finally {
+      setExpensesBusy(false)
+    }
+  }
 
   const setTicketSalesEnabled = async (next: boolean) => {
     if (!show?.id) return
@@ -331,19 +354,31 @@ function ShowDetailContent() {
           <p className="text-arden-white font-display font-bold text-2xl">{ticketsSold}</p>
         </div>
         <div className="bg-arden-surface border border-arden-border p-4">
-          <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Ticket Revenue</p>
-          <p className="text-arden-white font-display font-bold text-2xl">{fmtMoney(ticketRevenue)}</p>
+          <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Gross Revenue</p>
+          <p className="text-arden-white font-display font-bold text-2xl">{fmtMoney(money.gross)}</p>
+          {money.gross !== ticketRevenue && (
+            <p className="text-arden-subtext text-[10px] mt-1">{fmtMoney(ticketRevenue)} from tickets</p>
+          )}
         </div>
         <div className="bg-arden-surface border border-arden-border p-4">
-          <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Payout + Merch</p>
+          <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Expenses</p>
           <p className="text-arden-white font-display font-bold text-2xl">
-            {fmtMoney((stats.payout || 0) + (stats.merchSales || 0))}
+            {money.outgoings > 0 ? `−${fmtMoney(money.outgoings)}` : fmtMoney(0)}
           </p>
+          {(stats.costs || 0) > 0 && money.expensesTotal > 0 && (
+            <p className="text-arden-subtext text-[10px] mt-1">
+              incl. {fmtMoney(stats.costs || 0)} other costs
+            </p>
+          )}
         </div>
         <div className="bg-arden-surface border border-arden-border p-4">
-          <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Net</p>
-          <p className={`font-display font-bold text-2xl ${net >= 0 ? 'text-arden-accent' : 'text-red-400'}`}>
-            {fmtMoney(net)}
+          <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Band Payout</p>
+          <p
+            className={`font-display font-bold text-2xl ${
+              money.bandPayout >= 0 ? 'text-arden-accent' : 'text-red-400'
+            }`}
+          >
+            {fmtMoney(money.bandPayout)}
           </p>
         </div>
       </div>
@@ -591,6 +626,13 @@ function ShowDetailContent() {
         )}
       </div>
 
+      <ShowExpenses
+        expenses={expenses}
+        isAdmin={isAdmin}
+        busy={expensesBusy}
+        onChange={persistExpenses}
+      />
+
       {/* Post-show stats */}
       <div>
         <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase flex items-center gap-2 mb-4">
@@ -601,7 +643,7 @@ function ShowDetailContent() {
             {([
               ['attendance', 'Attendance', 'headcount'],
               ['payout', 'Band Payout ($)', 'from venue/host'],
-              ['costs', 'Costs ($)', 'travel, gear, fees'],
+              ['costs', 'Other Costs ($)', 'travel, gear — not the itemized ones'],
               ['merchSales', 'Merch Sales ($)', 'at the show'],
             ] as const).map(([key, label, hint]) => (
               <div key={key}>

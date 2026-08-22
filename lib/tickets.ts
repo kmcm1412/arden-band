@@ -1,5 +1,5 @@
 import { fmtMoney, roundMoney, formatDateTime, toEasternIso } from '@/lib/utils'
-import type { TicketSale } from '@/lib/types'
+import type { TicketSale, ShowExpense } from '@/lib/types'
 
 export type TicketNameMode = 'none' | 'party' | 'all'
 
@@ -276,4 +276,54 @@ export function guestListFilename(venue: string, datetime?: string): string {
   // filename should read as the night the band played
   const day = datetime ? toEasternIso(datetime).slice(0, 10) : ''
   return `${slug}-guest-list${day ? `-${day}` : ''}.txt`
+}
+
+// ─── Show money ─────────────────────────────────────────────────────────────
+
+export interface ShowFinancials {
+  ticketsSold: number
+  /** Money taken at the door and through Venmo */
+  ticketRevenue: number
+  /** Sum of the itemized deductions */
+  expensesTotal: number
+  /** Everything in: tickets, plus any venue payout and merch logged in stats */
+  gross: number
+  /** Everything out: itemized expenses plus the free-form costs field */
+  outgoings: number
+  /** What the band actually keeps */
+  bandPayout: number
+}
+
+/**
+ * The one place show money is added up.
+ *
+ * The show page and the history page both render these numbers, and they used
+ * to compute them separately — which is how two screens start disagreeing about
+ * what a night earned. Venue payout, merch, and the free-form costs field are
+ * folded in so shows paid a flat fee still total correctly; for a night the
+ * band self-promoted they are all zero and this reduces to tickets minus
+ * expenses.
+ */
+export function showFinancials(show: {
+  ticketSales?: TicketSale[]
+  expenses?: ShowExpense[]
+  stats?: { payout?: number; merchSales?: number; costs?: number }
+}): ShowFinancials {
+  const sales = show.ticketSales || []
+  const ticketsSold = sales.reduce((n, s) => n + (s.qty || 0), 0)
+  const ticketRevenue = roundMoney(sales.reduce((n, s) => n + (s.amount || 0), 0))
+  const expensesTotal = roundMoney(
+    (show.expenses || []).reduce((n, e) => n + (e.amount || 0), 0)
+  )
+  const stats = show.stats || {}
+  const gross = roundMoney(ticketRevenue + (stats.payout || 0) + (stats.merchSales || 0))
+  const outgoings = roundMoney(expensesTotal + (stats.costs || 0))
+  return {
+    ticketsSold,
+    ticketRevenue,
+    expensesTotal,
+    gross,
+    outgoings,
+    bandPayout: roundMoney(gross - outgoings),
+  }
 }

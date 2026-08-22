@@ -7,6 +7,7 @@ import { collection, getDocs } from 'firebase/firestore'
 import { Show, TicketOrder } from '@/lib/types'
 import { useAuth } from '@/lib/auth/context'
 import { fmtMoney, parseShowDate, formatInEastern } from '@/lib/utils'
+import { showFinancials } from '@/lib/tickets'
 import { BarChart3, ChevronRight, MapPin, Clock } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 
@@ -171,20 +172,36 @@ function HistoryPageContent() {
 
       {/* Money totals — appears once any sales or stats are logged */}
       {(() => {
-        const active = shows.filter(s => s.status !== 'cancelled')
-        const ticketRevenue = active.reduce((sum, s) => sum + (s.ticketSales || []).reduce((n, t) => n + (t.amount || 0), 0), 0)
-        const ticketsSold = active.reduce((sum, s) => sum + (s.ticketSales || []).reduce((n, t) => n + (t.qty || 0), 0), 0)
-        const payout = active.reduce((sum, s) => sum + (s.stats?.payout || 0), 0)
-        const merch = active.reduce((sum, s) => sum + (s.stats?.merchSales || 0), 0)
-        const costs = active.reduce((sum, s) => sum + (s.stats?.costs || 0), 0)
-        const net = ticketRevenue + payout + merch - costs
-        if (ticketsSold === 0 && payout === 0 && costs === 0 && merch === 0) return null
+        // Per-show first, then summed: the same helper the show page renders,
+        // so what the band reads here matches every individual night
+        const totals = shows
+          .filter(s => s.status !== 'cancelled')
+          .map(showFinancials)
+          .reduce(
+            (acc, m) => ({
+              ticketsSold: acc.ticketsSold + m.ticketsSold,
+              ticketRevenue: acc.ticketRevenue + m.ticketRevenue,
+              gross: acc.gross + m.gross,
+              outgoings: acc.outgoings + m.outgoings,
+              bandPayout: acc.bandPayout + m.bandPayout,
+            }),
+            { ticketsSold: 0, ticketRevenue: 0, gross: 0, outgoings: 0, bandPayout: 0 }
+          )
+        if (totals.ticketsSold === 0 && totals.gross === 0 && totals.outgoings === 0) return null
         return (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <StatTile label="Tickets Sold" value={ticketsSold} sub={`${fmtMoney(ticketRevenue)} in ticket sales`} />
-            <StatTile label="Payouts" value={fmtMoney(payout)} sub="from venues & hosts" />
-            <StatTile label="Costs" value={fmtMoney(costs)} sub={merch > 0 ? `+${fmtMoney(merch)} merch sold` : undefined} />
-            <StatTile label="Net Earned" value={fmtMoney(net)} sub="all-time, logged shows" />
+            <StatTile
+              label="Tickets Sold"
+              value={totals.ticketsSold}
+              sub={`${fmtMoney(totals.ticketRevenue)} in ticket sales`}
+            />
+            <StatTile label="Gross Revenue" value={fmtMoney(totals.gross)} sub="tickets, payouts & merch" />
+            <StatTile label="Expenses" value={fmtMoney(totals.outgoings)} sub="door, sound, venue & costs" />
+            <StatTile
+              label="Band Payout"
+              value={fmtMoney(totals.bandPayout)}
+              sub="all-time, after expenses"
+            />
           </div>
         )
       })()}

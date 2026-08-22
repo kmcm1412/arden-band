@@ -41,6 +41,8 @@ export interface Show {
   ticketNamesRequired?: boolean
   /** Confirmed ticket sales ledger — the only source the money stats count */
   ticketSales?: TicketSale[]
+  /** Itemized deductions taken out of ticket revenue (door, sound, venue cut) */
+  expenses?: ShowExpense[]
   /** Post-show numbers, filled in by the band afterwards */
   stats?: ShowStats
   notes?: string
@@ -104,6 +106,15 @@ export interface TicketOrder {
   confirmedBy?: string
   /** id of the TicketSale minted on confirm */
   saleId?: string
+}
+
+/** One line item taken off the top, e.g. { label: 'Door & Sound', amount: 150 } */
+export interface ShowExpense {
+  /** Stable key so a row survives being edited or reordered */
+  id: string
+  label: string
+  /** Dollars deducted */
+  amount: number
 }
 
 export interface ShowStats {
