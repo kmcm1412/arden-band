@@ -60,7 +60,12 @@ export interface TicketSale {
   ticketNames?: string[]
   /** Number of tickets in this sale */
   qty: number
-  method: 'venmo' | 'cash' | 'door' | 'other'
+  /**
+   * How the ticket was accounted for. 'door-list' means the name came off the
+   * printed list on the night rather than from a matched payment — the person
+   * was let in, but no Venmo transaction was tied to them.
+   */
+  method: 'venmo' | 'cash' | 'door' | 'door-list' | 'other'
   /** Dollars received for this sale */
   amount: number
   note?: string
