@@ -72,13 +72,22 @@ export async function POST(req: NextRequest) {
       isPublic?: boolean
       status?: string
       ticketPrice?: number
+      ticketSalesEnabled?: boolean
       ticketNameMode?: 'none' | 'party' | 'all' | null
       ticketNamesRequired?: boolean | null
     }
 
-    // Only shows that are actually selling tickets publicly can take checkouts
+    // Only shows that are actually selling tickets publicly can take checkouts.
+    // The switch is re-checked here rather than trusted to the widget: a page
+    // loaded before sales were turned off would otherwise still file orders.
+    // Undefined means enabled, matching the public page and the dashboard.
     const price = typeof show.ticketPrice === 'number' ? show.ticketPrice : 0
-    if (!show.isPublic || price <= 0 || show.status === 'cancelled') {
+    if (
+      !show.isPublic ||
+      price <= 0 ||
+      show.status === 'cancelled' ||
+      show.ticketSalesEnabled === false
+    ) {
       return NextResponse.json({ error: 'Tickets not available for this show' }, { status: 400 })
     }
 

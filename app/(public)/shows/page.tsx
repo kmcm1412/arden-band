@@ -28,6 +28,7 @@ async function getShows() {
         ticketPrice: number | null
         ticketNameMode: 'none' | 'party' | 'all' | null
         ticketWidgetMode: 'full' | 'simple' | null
+        ticketSalesEnabled: boolean | null
         ticketNamesRequired: boolean | null
         status: string
         isPublic: boolean
@@ -78,19 +79,24 @@ export default async function ShowsPage() {
       show.status === 'cancelled'
         ? 'https://schema.org/EventCancelled'
         : 'https://schema.org/EventScheduled',
-    ...(show.ticketPrice && show.ticketPrice > 0
-      ? {
-          offers: {
-            '@type': 'Offer',
-            price: show.ticketPrice,
-            priceCurrency: 'USD',
-            url: `${SITE_URL}/shows`,
-            availability: 'https://schema.org/InStock',
-          },
-        }
-      : show.ticketLink
-        ? { offers: { '@type': 'Offer', url: show.ticketLink } }
-        : {}),
+    // Sales switched off: advertise no offer at all rather than assert a status
+    // (the door may still sell) — search results shouldn't promise a checkout
+    // the page won't show
+    ...(show.ticketSalesEnabled === false
+      ? {}
+      : show.ticketPrice && show.ticketPrice > 0
+        ? {
+            offers: {
+              '@type': 'Offer',
+              price: show.ticketPrice,
+              priceCurrency: 'USD',
+              url: `${SITE_URL}/shows`,
+              availability: 'https://schema.org/InStock',
+            },
+          }
+        : show.ticketLink
+          ? { offers: { '@type': 'Offer', url: show.ticketLink } }
+          : {}),
   }))
 
   return (
@@ -111,6 +117,11 @@ export default async function ShowsPage() {
           <div className="space-y-4 mb-20">
             {upcoming.map((show) => {
               const d = formatShowDate(show.datetime)
+              // Undefined means on — shows predating the switch keep selling
+              const ticketsOn = show.ticketSalesEnabled !== false
+              const hasTicketing = Boolean(
+                (show.ticketPrice && show.ticketPrice > 0) || show.ticketLink || show.ticketInfo
+              )
               return (
                 <div
                   key={show.id}
@@ -145,7 +156,7 @@ export default async function ShowsPage() {
                       </div>
 
                       {/* Generic ticket button only when the Venmo widget isn't handling tickets */}
-                      {show.ticketLink && !(show.ticketPrice && show.ticketPrice > 0) && (
+                      {ticketsOn && show.ticketLink && !(show.ticketPrice && show.ticketPrice > 0) && (
                         <a
                           href={show.ticketLink}
                           target="_blank"
@@ -157,7 +168,14 @@ export default async function ShowsPage() {
                       )}
                     </div>
 
-                    {show.ticketPrice && show.ticketPrice > 0 ? (
+                    {!ticketsOn ? (
+                      hasTicketing && (
+                        <p className="text-sm text-arden-subtext bg-arden-black/40 border-l-2 border-arden-border px-4 py-2.5 leading-relaxed">
+                          <span className="text-arden-subtext text-xs tracking-widest uppercase mr-2">Tickets</span>
+                          Tickets aren&apos;t on sale here right now.
+                        </p>
+                      )
+                    ) : show.ticketPrice && show.ticketPrice > 0 ? (
                       <VenmoTicketWidget
                         showId={show.id}
                         price={show.ticketPrice}

@@ -1,4 +1,5 @@
-import { fmtMoney, roundMoney } from '@/lib/utils'
+import { fmtMoney, roundMoney, formatDateTime } from '@/lib/utils'
+import type { TicketSale } from '@/lib/types'
 
 export type TicketNameMode = 'none' | 'party' | 'all'
 
@@ -128,4 +129,154 @@ export function parseVenmoPaste(text: string): ParsedVenmoPaste {
   }
 
   return { rows, skipped }
+}
+
+// ─── Guest list ─────────────────────────────────────────────────────────────
+
+export type GuestSort = 'first' | 'last'
+
+export interface GuestListEntry {
+  /** Name as it should be read at the door */
+  name: string
+  /** The purchaser, when they aren't the ticketholder */
+  boughtBy?: string
+  /**
+   * Sort under this instead of `name`. Keeps a party's unnamed extras sitting
+   * beside the person who bought them rather than stranded under "G".
+   */
+  sortAs?: string
+  /** Came from a checkout nobody has matched to a real Venmo payment yet */
+  unconfirmed?: boolean
+}
+
+/** Trim and collapse runs of internal whitespace, so " Zoe  Zane " reads right */
+function cleanName(value: string): string {
+  return (value || '').trim().replace(/\s+/g, ' ')
+}
+
+function sortKey(value: string, mode: GuestSort): string {
+  const parts = value.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return ''
+  // Single-word entries have no surname to promote, so they sort as themselves
+  if (mode === 'last' && parts.length > 1) {
+    return [parts[parts.length - 1], ...parts.slice(0, -1)].join(' ').toLowerCase()
+  }
+  return parts.join(' ').toLowerCase()
+}
+
+/**
+ * Flattens a show's sales into one row per ticket, alphabetized for the door.
+ *
+ * Ticket count is the source of truth, not name count: a sale for three that
+ * names two people still yields three rows, because the door needs to know a
+ * third person is covered. Sales logged by hand carry no per-ticket names, so
+ * the buyer stands in for the first ticket and the rest become their guests.
+ */
+export function buildGuestList(
+  sales: TicketSale[],
+  mode: GuestSort = 'first',
+  /**
+   * Pending checkouts to fold in. Excluded by default and marked when
+   * included: these people started a payment, which is not the same as
+   * having paid.
+   */
+  pendingOrders: { names: string[]; qty: number }[] = []
+): GuestListEntry[] {
+  const entries: GuestListEntry[] = []
+
+  for (const sale of sales) {
+    const buyer = cleanName(sale.name) || 'Unnamed buyer'
+    const names = (sale.ticketNames || []).map(cleanName).filter(Boolean)
+    const qty = Math.max(1, sale.qty || 1)
+
+    if (names.length > 0) {
+      for (const n of names) {
+        entries.push(
+          n.toLowerCase() === buyer.toLowerCase() ? { name: n } : { name: n, boughtBy: buyer }
+        )
+      }
+      // Tickets the buyer never named still get a line — never silently dropped
+      for (let i = names.length; i < qty; i++) {
+        entries.push({ name: `Guest of ${buyer}`, boughtBy: buyer, sortAs: buyer })
+      }
+    } else {
+      entries.push({ name: buyer })
+      for (let i = 1; i < qty; i++) {
+        entries.push({ name: `Guest of ${buyer}`, boughtBy: buyer, sortAs: buyer })
+      }
+    }
+  }
+
+  for (const order of pendingOrders) {
+    const names = (order.names || []).map(cleanName).filter(Boolean)
+    const qty = Math.max(1, order.qty || 1)
+    const anchor = names[0] || 'Unnamed checkout'
+    if (names.length === 0) entries.push({ name: anchor, unconfirmed: true })
+    else for (const n of names) entries.push({ name: n, unconfirmed: true })
+    for (let i = Math.max(1, names.length); i < qty; i++) {
+      entries.push({ name: `Guest of ${anchor}`, sortAs: anchor, unconfirmed: true })
+    }
+  }
+
+  return entries.sort((a, b) => {
+    const ka = sortKey(a.sortAs ?? a.name, mode)
+    const kb = sortKey(b.sortAs ?? b.name, mode)
+    const cmp = ka.localeCompare(kb, 'en', { sensitivity: 'base' })
+    // Named guests before the "Guest of" filler when they share a sort key
+    return cmp !== 0 ? cmp : a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })
+  })
+}
+
+/** Plain text a phone can copy and a printer can handle */
+export function formatGuestList({
+  venue,
+  datetime,
+  entries,
+  purchases,
+}: {
+  venue: string
+  datetime?: string
+  entries: GuestListEntry[]
+  purchases: number
+}): string {
+  const width = String(entries.length).length
+  // Pad names to a common column so the annotations line up on paper, but not
+  // so far that one long name pushes every other line off a phone screen
+  const nameCol = Math.min(28, entries.reduce((w, e) => Math.max(w, e.name.length), 0))
+  const unconfirmed = entries.filter(e => e.unconfirmed).length
+  const lines = entries.map((e, i) => {
+    const num = `${String(i + 1).padStart(width, ' ')}.`
+    const mark = e.unconfirmed ? ' *' : ''
+    const note = e.boughtBy ? `  — bought by ${e.boughtBy}` : ''
+    if (!note && !mark) return `${num} ${e.name}`
+    return `${num} ${e.name.padEnd(nameCol, ' ')}${note}${mark}`
+  })
+
+  const header = [
+    `${venue} — Guest List`,
+    datetime ? formatDateTime(datetime) : null,
+    `${entries.length} ${entries.length === 1 ? 'guest' : 'guests'} · ${purchases} ${purchases === 1 ? 'purchase' : 'purchases'}`,
+  ].filter(Boolean)
+
+  const footer = unconfirmed
+    ? ['', `* ${unconfirmed} unconfirmed — started a Venmo checkout; payment not verified.`]
+    : []
+
+  return [...header, '', ...lines, ...footer, ''].join('\n')
+}
+
+/** Filesystem-safe filename like "the-delancey-guest-list-2026-08-22.txt" */
+export function guestListFilename(venue: string, datetime?: string): string {
+  const slug =
+    venue
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'show'
+  // Local date parts, not toISOString(): an 8pm ET show is already tomorrow in UTC
+  const d = datetime ? new Date(datetime) : null
+  const day =
+    d && !Number.isNaN(d.getTime())
+      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      : ''
+  return `${slug}-guest-list${day ? `-${day}` : ''}.txt`
 }

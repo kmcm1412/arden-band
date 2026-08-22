@@ -13,6 +13,7 @@ import { formatDateTime, fmtMoney, roundMoney } from '@/lib/utils'
 import { ArrowLeft, Plus, Ticket, DollarSign, Save, Clock, ClipboardPaste } from 'lucide-react'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 import { SaleRow, OrderRow, useExpandedRow } from '@/components/dashboard/TicketRows'
+import { GuestListExport, TicketSalesToggle } from '@/components/dashboard/TicketControls'
 
 const IMPORT_PLACEHOLDER = [
   '2 tickets - $20 (The Delancey): Kyle, Sam',
@@ -51,6 +52,7 @@ function ShowDetailContent() {
   const [importing, setImporting] = useState(false)
   // One row open at a time across both lists — opening a row closes the other
   const { expandedKey, toggleRow } = useExpandedRow()
+  const [salesToggleBusy, setSalesToggleBusy] = useState(false)
 
   const loadShow = useCallback(async () => {
     if (!params?.id) return
@@ -106,6 +108,28 @@ function ShowDetailContent() {
   const net = roundMoney((stats.payout || 0) + (stats.merchSales || 0) + ticketRevenue - (stats.costs || 0))
   const isPast = show ? new Date(show.datetime) <= new Date() : false
   const pendingOrders = orders.filter(o => o.status === 'pending')
+  // Undefined means enabled: shows created before the toggle keep selling
+  const ticketSalesEnabled = show?.ticketSalesEnabled !== false
+
+  const setTicketSalesEnabled = async (next: boolean) => {
+    if (!show?.id) return
+    setSalesToggleBusy(true)
+    setError('')
+    try {
+      await updateDoc(doc(db, 'shows', show.id), { ticketSalesEnabled: next })
+      setShow(s => (s ? { ...s, ticketSalesEnabled: next } : s))
+      logActivity(
+        user,
+        next ? 'enabled ticket sales' : 'disabled ticket sales',
+        show.venue
+      )
+    } catch (err) {
+      console.error('Failed to toggle ticket sales:', err)
+      setError('Could not change ticket sales. Are you an admin?')
+    } finally {
+      setSalesToggleBusy(false)
+    }
+  }
 
   // Transaction: read-modify-write so two admins logging sales at the same
   // time can't clobber each other's entries
@@ -324,6 +348,20 @@ function ShowDetailContent() {
         </div>
       </div>
 
+      {/* Public ticket sales switch */}
+      {isAdmin && (
+        <div className="mb-10">
+          <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase flex items-center gap-2 mb-4">
+            <Ticket size={14} /> Ticket Settings
+          </h2>
+          <TicketSalesToggle
+            enabled={ticketSalesEnabled}
+            busy={salesToggleBusy}
+            onChange={setTicketSalesEnabled}
+          />
+        </div>
+      )}
+
       {/* Venmo checkouts — intent captured from the public widget */}
       {isAdmin && (
         <div className="mb-10">
@@ -524,6 +562,13 @@ function ShowDetailContent() {
             </div>
           </div>
         )}
+
+        <GuestListExport
+          venue={show.venue}
+          datetime={show.datetime}
+          sales={sales}
+          pendingOrders={pendingOrders}
+        />
 
         {sales.length === 0 && !addingSale ? (
           <p className="text-arden-subtext text-sm py-6 text-center border border-dashed border-arden-border">

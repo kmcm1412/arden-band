@@ -32,6 +32,11 @@ export interface Show {
    * 'simple' = just the price and a link to the band's Venmo page
    */
   ticketWidgetMode?: 'full' | 'simple'
+  /**
+   * Master switch for public ticket sales on this show. Undefined means on —
+   * shows that predate the toggle keep selling without needing a backfill.
+   */
+  ticketSalesEnabled?: boolean
   /** @deprecated superseded by ticketNameMode — old boolean kept for back-compat reads */
   ticketNamesRequired?: boolean
   /** Confirmed ticket sales ledger — the only source the money stats count */
