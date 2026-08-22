@@ -43,6 +43,8 @@ export interface Show {
   ticketSales?: TicketSale[]
   /** Itemized deductions taken out of ticket revenue (door, sound, venue cut) */
   expenses?: ShowExpense[]
+  /** Walk-ups paid at the door, logged after the show — no names, just totals */
+  doorSales?: DoorSales
   /** Post-show numbers, filled in by the band afterwards */
   stats?: ShowStats
   notes?: string
@@ -104,8 +106,22 @@ export interface TicketOrder {
   createdAt: string
   confirmedAt?: string
   confirmedBy?: string
+  /** Why an order was dismissed, when it was voided in bulk rather than by hand */
+  voidReason?: string
   /** id of the TicketSale minted on confirm */
   saleId?: string
+}
+
+/**
+ * Tickets sold at the door on the night. Deliberately just two numbers: these
+ * are walk-ups, so there are no names to check in and the door price may not
+ * match the presale price.
+ */
+export interface DoorSales {
+  /** How many walked up */
+  count: number
+  /** Total dollars taken at the door */
+  amount: number
 }
 
 /** One line item taken off the top, e.g. { label: 'Door & Sound', amount: 150 } */

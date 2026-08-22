@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Plus, Trash2, Receipt } from 'lucide-react'
 import type { ShowExpense } from '@/lib/types'
 import { fmtMoney, roundMoney } from '@/lib/utils'
@@ -35,10 +35,15 @@ export default function ShowExpenses({
 }) {
   const [rows, setRows] = useState<ShowExpense[]>(expenses)
 
-  // Re-sync when the show reloads underneath us, but never mid-edit
-  useEffect(() => {
+  // Re-sync when the show reloads underneath us. Adjusting state during render
+  // rather than in an effect: React re-runs this component before touching the
+  // DOM, so there is no cascading render, and no window where the rows on
+  // screen disagree with the show that was just loaded.
+  const [synced, setSynced] = useState(expenses)
+  if (expenses !== synced) {
+    setSynced(expenses)
     setRows(expenses)
-  }, [expenses])
+  }
 
   const total = roundMoney(rows.reduce((n, r) => n + (r.amount || 0), 0))
 

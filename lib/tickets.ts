@@ -1,5 +1,5 @@
 import { fmtMoney, roundMoney, formatDateTime, toEasternIso } from '@/lib/utils'
-import type { TicketSale, ShowExpense } from '@/lib/types'
+import type { TicketSale, ShowExpense, DoorSales } from '@/lib/types'
 
 export type TicketNameMode = 'none' | 'party' | 'all'
 
@@ -281,9 +281,16 @@ export function guestListFilename(venue: string, datetime?: string): string {
 // ─── Show money ─────────────────────────────────────────────────────────────
 
 export interface ShowFinancials {
+  /** Presale tickets — the ones with names attached */
   ticketsSold: number
-  /** Money taken at the door and through Venmo */
+  /** Walk-ups counted at the door */
+  doorCount: number
+  /** Presale plus walk-ups */
+  totalTickets: number
+  /** Presale money, from Venmo and the door list */
   ticketRevenue: number
+  /** Cash taken at the door on the night */
+  doorRevenue: number
   /** Sum of the itemized deductions */
   expensesTotal: number
   /** Everything in: tickets, plus any venue payout and merch logged in stats */
@@ -307,20 +314,28 @@ export interface ShowFinancials {
 export function showFinancials(show: {
   ticketSales?: TicketSale[]
   expenses?: ShowExpense[]
+  doorSales?: DoorSales
   stats?: { payout?: number; merchSales?: number; costs?: number }
 }): ShowFinancials {
   const sales = show.ticketSales || []
   const ticketsSold = sales.reduce((n, s) => n + (s.qty || 0), 0)
   const ticketRevenue = roundMoney(sales.reduce((n, s) => n + (s.amount || 0), 0))
+  const doorCount = show.doorSales?.count || 0
+  const doorRevenue = roundMoney(show.doorSales?.amount || 0)
   const expensesTotal = roundMoney(
     (show.expenses || []).reduce((n, e) => n + (e.amount || 0), 0)
   )
   const stats = show.stats || {}
-  const gross = roundMoney(ticketRevenue + (stats.payout || 0) + (stats.merchSales || 0))
+  const gross = roundMoney(
+    ticketRevenue + doorRevenue + (stats.payout || 0) + (stats.merchSales || 0)
+  )
   const outgoings = roundMoney(expensesTotal + (stats.costs || 0))
   return {
     ticketsSold,
+    doorCount,
+    totalTickets: ticketsSold + doorCount,
     ticketRevenue,
+    doorRevenue,
     expensesTotal,
     gross,
     outgoings,

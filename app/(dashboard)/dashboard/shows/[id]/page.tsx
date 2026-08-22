@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { db } from '@/lib/firebase/client'
 import { doc, getDoc, updateDoc, runTransaction } from 'firebase/firestore'
-import { Show, TicketSale, ShowStats, TicketOrder, ShowExpense } from '@/lib/types'
+import { Show, TicketSale, ShowStats, TicketOrder, ShowExpense, DoorSales } from '@/lib/types'
 import { parseVenmoPaste, showFinancials } from '@/lib/tickets'
 import { useAuth } from '@/lib/auth/context'
 import { logActivity } from '@/lib/activity'
@@ -15,6 +15,7 @@ import DashboardGuard from '@/components/dashboard/DashboardGuard'
 import { SaleRow, OrderRow, useExpandedRow } from '@/components/dashboard/TicketRows'
 import { GuestListExport, TicketSalesToggle } from '@/components/dashboard/TicketControls'
 import ShowExpenses from '@/components/dashboard/ShowExpenses'
+import DoorSalesInput from '@/components/dashboard/DoorSalesInput'
 
 const IMPORT_PLACEHOLDER = [
   '2 tickets - $20 (The Delancey): Kyle, Sam',
@@ -55,6 +56,7 @@ function ShowDetailContent() {
   const { expandedKey, toggleRow } = useExpandedRow()
   const [salesToggleBusy, setSalesToggleBusy] = useState(false)
   const [expensesBusy, setExpensesBusy] = useState(false)
+  const [doorBusy, setDoorBusy] = useState(false)
 
   const loadShow = useCallback(async () => {
     if (!params?.id) return
@@ -104,10 +106,13 @@ function ShowDetailContent() {
 
 
   const sales = show?.ticketSales || []
-  const expenses = show?.expenses || []
+  // Memoized because `|| []` would otherwise mint a new array on every render,
+  // and the expenses editor re-syncs whenever this reference changes
+  const expenses = useMemo(() => show?.expenses || [], [show?.expenses])
   const stats = show?.stats || {}
   // One shared calculation, so this page and the history page can't disagree
-  const money = showFinancials({ ticketSales: sales, expenses, stats })
+  const doorSales = show?.doorSales
+  const money = showFinancials({ ticketSales: sales, expenses, doorSales, stats })
   const { ticketsSold, ticketRevenue } = money
   const isPast = show ? parseShowDate(show.datetime) <= new Date() : false
   const pendingOrders = orders.filter(o => o.status === 'pending')
@@ -131,6 +136,27 @@ function ShowDetailContent() {
       loadShow().catch(() => {})
     } finally {
       setExpensesBusy(false)
+    }
+  }
+
+  const persistDoorSales = async (next: DoorSales) => {
+    if (!show?.id) return
+    setDoorBusy(true)
+    setError('')
+    try {
+      await updateDoc(doc(db, 'shows', show.id), { doorSales: next })
+      setShow(s => (s ? { ...s, doorSales: next } : s))
+      logActivity(
+        user,
+        'updated door sales',
+        `${show.venue} · ${next.count} at the door for ${fmtMoney(next.amount)}`
+      )
+    } catch (err) {
+      console.error('Failed to save door sales:', err)
+      setError('Could not save door sales. Are you an admin?')
+      loadShow().catch(() => {})
+    } finally {
+      setDoorBusy(false)
     }
   }
 
@@ -351,13 +377,21 @@ function ShowDetailContent() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
         <div className="bg-arden-surface border border-arden-border p-4">
           <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Tickets Sold</p>
-          <p className="text-arden-white font-display font-bold text-2xl">{ticketsSold}</p>
+          <p className="text-arden-white font-display font-bold text-2xl">{money.totalTickets}</p>
+          {money.doorCount > 0 && (
+            <p className="text-arden-subtext text-[10px] mt-1">
+              {ticketsSold} presale · {money.doorCount} at the door
+            </p>
+          )}
         </div>
         <div className="bg-arden-surface border border-arden-border p-4">
           <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Gross Revenue</p>
           <p className="text-arden-white font-display font-bold text-2xl">{fmtMoney(money.gross)}</p>
           {money.gross !== ticketRevenue && (
-            <p className="text-arden-subtext text-[10px] mt-1">{fmtMoney(ticketRevenue)} from tickets</p>
+            <p className="text-arden-subtext text-[10px] mt-1">
+              {fmtMoney(ticketRevenue)} presale
+              {money.doorRevenue > 0 && ` · ${fmtMoney(money.doorRevenue)} door`}
+            </p>
           )}
         </div>
         <div className="bg-arden-surface border border-arden-border p-4">
@@ -625,6 +659,13 @@ function ShowDetailContent() {
           </div>
         )}
       </div>
+
+      <DoorSalesInput
+        doorSales={doorSales}
+        isAdmin={isAdmin}
+        busy={doorBusy}
+        onChange={persistDoorSales}
+      />
 
       <ShowExpenses
         expenses={expenses}

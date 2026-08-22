@@ -179,7 +179,7 @@ function HistoryPageContent() {
           .map(showFinancials)
           .reduce(
             (acc, m) => ({
-              ticketsSold: acc.ticketsSold + m.ticketsSold,
+              ticketsSold: acc.ticketsSold + m.totalTickets,
               ticketRevenue: acc.ticketRevenue + m.ticketRevenue,
               gross: acc.gross + m.gross,
               outgoings: acc.outgoings + m.outgoings,
@@ -193,7 +193,7 @@ function HistoryPageContent() {
             <StatTile
               label="Tickets Sold"
               value={totals.ticketsSold}
-              sub={`${fmtMoney(totals.ticketRevenue)} in ticket sales`}
+              sub={`${fmtMoney(totals.gross)} taken in`}
             />
             <StatTile label="Gross Revenue" value={fmtMoney(totals.gross)} sub="tickets, payouts & merch" />
             <StatTile label="Expenses" value={fmtMoney(totals.outgoings)} sub="door, sound, venue & costs" />
@@ -230,7 +230,7 @@ function HistoryPageContent() {
         ) : (
           <div className="space-y-2">
             {past.map(show => {
-              const sold = (show.ticketSales || []).reduce((n, t) => n + (t.qty || 0), 0)
+              const sold = showFinancials(show).totalTickets
               return (
                 <Link
                   key={show.id}
