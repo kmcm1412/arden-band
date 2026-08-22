@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { Minus, Plus, ExternalLink } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Minus, Plus, ExternalLink, Lock } from 'lucide-react'
 import { fmtMoney, roundMoney } from '@/lib/utils'
 import { buildVenmoNote, MAX_TICKETS, type TicketNameMode } from '@/lib/tickets'
 
 const VENMO_USER = 'ardenjams'
+/** How often an open, visible page re-checks that sales are still on */
+const STATUS_POLL_MS = 45_000
 
 export type { TicketNameMode }
 
@@ -37,6 +39,75 @@ export default function VenmoTicketWidget({
   const [partyName, setPartyName] = useState('')
   // Sparse name storage — the visible box count derives from qty directly
   const [names, setNames] = useState<string[]>([])
+  // The server rendered this widget, so sales were on a moment ago. Anything
+  // that closes them after that arrives through the checks below.
+  const [salesClosed, setSalesClosed] = useState(false)
+  const checking = useRef(false)
+  // Mirrors salesClosed so the check below doesn't need it as a dependency,
+  // which would rebuild the poll every time the answer changed
+  const closedRef = useRef(false)
+
+  /**
+   * Re-reads whether this show is still selling.
+   *
+   * Fails open on a network error — a fan mid-purchase should not be blocked by
+   * a blip, and the checkout API refuses the order anyway if sales really are
+   * off. Returns the answer so the click handler can act on it directly.
+   */
+  const checkSalesOpen = useCallback(async (): Promise<boolean> => {
+    if (checking.current) return !closedRef.current
+    checking.current = true
+    try {
+      const res = await fetch(`/api/tickets/status?showId=${encodeURIComponent(showId)}`, {
+        cache: 'no-store',
+      })
+      if (!res.ok) return true
+      const data = await res.json()
+      const open = data.enabled !== false
+      closedRef.current = !open
+      setSalesClosed(!open)
+      return open
+    } catch {
+      return true
+    } finally {
+      checking.current = false
+    }
+  }, [showId])
+
+  // Keep an idle open tab honest: poll while visible, and re-check the moment
+  // the tab is looked at again after being hidden or backgrounded.
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | undefined
+
+    const start = () => {
+      stop()
+      timer = setInterval(() => {
+        if (document.visibilityState === 'visible') checkSalesOpen()
+      }, STATUS_POLL_MS)
+    }
+    const stop = () => {
+      if (timer) clearInterval(timer)
+      timer = undefined
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        checkSalesOpen()
+        start()
+      } else {
+        stop()
+      }
+    }
+
+    checkSalesOpen()
+    start()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      stop()
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [checkSalesOpen])
 
   const step = (delta: number) =>
     setQty(prev => Math.min(MAX_TICKETS, Math.max(1, prev + delta)))
@@ -84,7 +155,14 @@ export default function VenmoTicketWidget({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ showId, qty, names: checkoutNames }),
         keepalive: true,
-      }).catch(() => {})
+      })
+        .then(res => {
+          // The API is the authority. If it refused because sales closed in the
+          // gap between our last check and this tap, say so — on desktop the
+          // page is still here to read it.
+          if (res.status === 400) setSalesClosed(true)
+        })
+        .catch(() => {})
     } catch {
       /* never block the payment */
     }
@@ -92,7 +170,11 @@ export default function VenmoTicketWidget({
 
   const openVenmo = (e: React.MouseEvent) => {
     e.preventDefault()
-    if (namesMissing) return
+    if (namesMissing || salesClosed) return
+    // Deliberately not awaited: a fetch here would cost the user gesture and
+    // get the desktop tab caught by the popup blocker. The pointerdown check
+    // just fired, the poll runs underneath, and the checkout API is the
+    // backstop that decides whether the order actually counts.
     recordCheckout()
     const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent)
     if (isMobile) {
@@ -109,6 +191,17 @@ export default function VenmoTicketWidget({
     }
   }
 
+  if (salesClosed) {
+    return (
+      <div className="bg-arden-black/40 border-l-2 border-arden-border px-4 py-4">
+        <p className="text-arden-subtext text-sm flex items-center gap-2">
+          <Lock size={13} className="flex-shrink-0" />
+          Ticket sales have closed for this show.
+        </p>
+      </div>
+    )
+  }
+
   if (simple) {
     return (
       <div className="bg-arden-black/40 border-l-2 border-arden-accent px-4 py-4">
@@ -120,6 +213,10 @@ export default function VenmoTicketWidget({
             href={`https://account.venmo.com/u/${VENMO_USER}`}
             target="_blank"
             rel="noopener noreferrer"
+            onPointerDown={() => checkSalesOpen()}
+            onClick={e => {
+              if (salesClosed) e.preventDefault()
+            }}
             className="btn-primary text-xs py-2.5 px-5"
           >
             Pay @{VENMO_USER} on Venmo <ExternalLink size={12} />
@@ -176,6 +273,7 @@ export default function VenmoTicketWidget({
           href={namesMissing ? undefined : webUrl}
           rel="noopener noreferrer"
           aria-disabled={namesMissing}
+          onPointerDown={() => checkSalesOpen()}
           onClick={openVenmo}
           className={`btn-primary text-xs py-2.5 px-5 ${namesMissing ? 'opacity-40 cursor-not-allowed' : ''}`}
         >
