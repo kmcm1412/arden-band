@@ -35,7 +35,15 @@ export default async function AboutPage() {
             {aboutImage ? (
               <div className="aspect-square bg-arden-surface overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={aboutImage} alt="Arden" className="w-full h-full object-cover" />
+                <img
+                  src={aboutImage}
+                  alt="Arden"
+                  width={800}
+                  height={800}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                />
               </div>
             ) : (
               <div className="aspect-square bg-arden-surface flex items-center justify-center">

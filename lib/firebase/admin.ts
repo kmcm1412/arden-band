@@ -39,9 +39,7 @@ export function getAdminAuth(): Auth {
 export const adminDb = new Proxy({} as Firestore, {
   get(_target, prop) {
     const db = getAdminDb()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const value = (db as any)[prop]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return typeof value === 'function' ? (value as any).bind(db) : value
   },
 })
@@ -49,9 +47,7 @@ export const adminDb = new Proxy({} as Firestore, {
 export const adminAuth = new Proxy({} as Auth, {
   get(_target, prop) {
     const auth = getAdminAuth()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const value = (auth as any)[prop]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return typeof value === 'function' ? (value as any).bind(auth) : value
   },
 })

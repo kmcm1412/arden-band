@@ -62,7 +62,15 @@ export default async function LinksPage() {
         <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-arden-accent mb-6 bg-arden-surface flex items-center justify-center">
           {aboutImage ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={aboutImage} alt="Arden" className="w-full h-full object-cover" />
+            <img
+              src={aboutImage}
+              alt="Arden"
+              width={96}
+              height={96}
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-cover"
+            />
           ) : (
             <span className="font-display text-4xl text-arden-accent">A</span>
           )}

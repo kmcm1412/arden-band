@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { db } from '@/lib/firebase/client'
 import { doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore'
-import { Save, ExternalLink, Upload, ImageIcon } from 'lucide-react'
+import { Save, ExternalLink, Upload } from 'lucide-react'
 import Link from 'next/link'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 import { useAuth } from '@/lib/auth/context'
 import { logActivity } from '@/lib/activity'
 import { compressImage } from '@/lib/image'
+import { ABOUT_IMAGE_FALLBACK } from '@/lib/site'
 
 interface SiteContent {
   // Homepage — Hero
@@ -388,16 +389,14 @@ function ContentPageContent() {
                 Band Photo <span className="normal-case">(square image shown on about page)</span>
               </label>
               <div className="flex items-start gap-4">
-                {content.aboutImage ? (
-                  <div className="w-32 h-32 flex-shrink-0 bg-arden-dark border border-arden-border overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={content.aboutImage} alt="About photo" className="w-full h-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="w-32 h-32 flex-shrink-0 bg-arden-dark border border-arden-border flex items-center justify-center">
-                    <ImageIcon size={24} className="text-arden-border" />
-                  </div>
-                )}
+                <div className="w-32 h-32 flex-shrink-0 bg-arden-dark border border-arden-border overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={content.aboutImage || ABOUT_IMAGE_FALLBACK}
+                    alt="About photo"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
                 <div className="flex flex-col gap-2">
                   <input
                     ref={fileInputRef}
@@ -415,7 +414,16 @@ function ContentPageContent() {
                     <Upload size={12} />
                     {uploading ? 'Uploading...' : content.aboutImage ? 'Replace Photo' : 'Upload Photo'}
                   </button>
-                  <p className="text-xs text-arden-subtext">Square image recommended. Image is compressed automatically. Hit &quot;Save Changes&quot; after selecting.</p>
+                  <p className="text-xs text-arden-subtext">
+                    Square image recommended. Hit &quot;Save Changes&quot; after selecting.
+                  </p>
+                  {!content.aboutImage && (
+                    <p className="text-xs text-arden-subtext">
+                      Showing the built-in photo. Uploading one stores it inside the site
+                      content record, which every page then has to load — worth it only when
+                      the photo actually changes.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

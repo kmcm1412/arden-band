@@ -47,3 +47,6 @@ next-env.d.ts
 service-account.json
 *-firebase-adminsdk-*.json
 serviceAccountKey.json
+
+# one-off backup of the migrated about photo
+about-image-original.base64.txt

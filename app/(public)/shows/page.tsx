@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { MapPin, ExternalLink } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
