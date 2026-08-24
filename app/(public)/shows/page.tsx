@@ -12,6 +12,13 @@ export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Shows — Arden',
   description: 'Upcoming Arden shows on Long Island and beyond — dates, venues, and tickets.',
+
+  alternates: { canonical: '/shows' },
+  openGraph: {
+    url: '/shows',
+    siteName: 'Arden',
+    description: 'Upcoming Arden shows on Long Island and beyond — dates, venues, and tickets.',
+  },
 }
 
 async function getShows() {

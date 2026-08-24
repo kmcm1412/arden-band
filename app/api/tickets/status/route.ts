@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { isRateLimited } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,12 @@ export async function GET(req: NextRequest) {
   const showId = req.nextUrl.searchParams.get('showId')
   if (!showId || showId.length > 200) {
     return NextResponse.json({ error: 'Invalid show' }, { status: 400 })
+  }
+
+  // The widget polls this every 45s per open tab, so the ceiling is generous —
+  // it exists to stop a script hammering a Firestore read, not to limit fans
+  if (await isRateLimited(req, { scope: 'status', windowMs: 10 * 60 * 1000, max: 120 })) {
+    return NextResponse.json({ enabled: true }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
   try {

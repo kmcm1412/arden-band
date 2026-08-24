@@ -1,38 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { isRateLimited } from '@/lib/rate-limit'
 import { roundMoney } from '@/lib/utils'
 import { buildVenmoNote, resolveNameMode, MAX_TICKETS } from '@/lib/tickets'
 
 export const dynamic = 'force-dynamic'
 
-const RATE_WINDOW_MS = 10 * 60 * 1000
-const RATE_MAX = 30
 const MAX_NAME_LEN = 100
-
-/**
- * Firestore-backed per-IP throttle, mirroring the contact route. Best-effort:
- * a throttle failure never blocks a checkout.
- */
-async function isRateLimited(req: NextRequest): Promise<boolean> {
-  try {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
-    const key = 'tickets:' + ip.replace(/[^a-zA-Z0-9.:_-]/g, '')
-    const ref = adminDb.collection('rateLimits').doc(key)
-    const now = Date.now()
-    const doc = await ref.get()
-    const data = doc.data()
-    if (data && now - data.windowStart < RATE_WINDOW_MS) {
-      if (data.count >= RATE_MAX) return true
-      await ref.update({ count: data.count + 1 })
-    } else {
-      await ref.set({ count: 1, windowStart: now })
-    }
-    return false
-  } catch (err) {
-    console.error('[tickets] Rate limit check failed:', err)
-    return false
-  }
-}
 
 /**
  * Records a ticket checkout started from the public Venmo widget.
@@ -45,7 +19,7 @@ async function isRateLimited(req: NextRequest): Promise<boolean> {
  */
 export async function POST(req: NextRequest) {
   try {
-    if (await isRateLimited(req)) {
+    if (await isRateLimited(req, { scope: 'tickets', windowMs: 10 * 60 * 1000, max: 30 })) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 

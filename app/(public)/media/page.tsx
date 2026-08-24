@@ -8,6 +8,13 @@ export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Media — Arden',
   description: 'Watch Arden live — full sets, jams, and sessions from the Long Island jam band.',
+
+  alternates: { canonical: '/media' },
+  openGraph: {
+    url: '/media',
+    siteName: 'Arden',
+    description: 'Watch Arden live — full sets, jams, and sessions from the Long Island jam band.',
+  },
 }
 
 export default async function MediaPage() {

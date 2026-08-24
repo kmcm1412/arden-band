@@ -9,6 +9,13 @@ export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Arden — Links',
   description: 'Listen, watch, and follow Arden — Long Island jam band.',
+
+  alternates: { canonical: '/links' },
+  openGraph: {
+    url: '/links',
+    siteName: 'Arden',
+    description: 'Listen, watch, and follow Arden — Long Island jam band.',
+  },
 }
 
 interface BioLink {

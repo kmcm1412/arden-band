@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { isRateLimited } from '@/lib/rate-limit'
 import { FieldValue } from 'firebase-admin/firestore'
 
 export const dynamic = 'force-dynamic'
@@ -14,6 +15,12 @@ function isValidPhone(phone: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Signing up is cheap for a visitor and cheap to abuse; this endpoint had
+    // no throttle at all, and the Firestore rules used to let a client skip it
+    if (await isRateLimited(req, { scope: 'subscribe', windowMs: 10 * 60 * 1000, max: 5 })) {
+      return NextResponse.json({ error: 'Too many attempts — please try again later.' }, { status: 429 })
+    }
+
     const body = await req.json()
     const { email, phone, name } = body
 

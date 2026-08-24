@@ -6,6 +6,13 @@ export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'About — Arden',
   description: 'Meet Arden — a genre-blending Long Island jam band. The story, the members, and how to get in touch.',
+
+  alternates: { canonical: '/about' },
+  openGraph: {
+    url: '/about',
+    siteName: 'Arden',
+    description: 'Meet Arden — a genre-blending Long Island jam band. The story, the members, and how to get in touch.',
+  },
 }
 
 export default async function AboutPage() {

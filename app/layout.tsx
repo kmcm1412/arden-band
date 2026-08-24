@@ -23,11 +23,16 @@ export const metadata: Metadata = {
   title: 'Arden — Long Island Jam Band',
   description:
     'Official website of Arden, a Long Island-based jam band. Upcoming shows, live videos, merch, and updates.',
+  // Canonical and og:url resolve against metadataBase, which keeps them on
+  // ardenband.com even though the old netlify address still redirects here
+  alternates: { canonical: '/' },
   openGraph: {
     title: 'Arden — Long Island Jam Band',
     description:
       'Official website of Arden, a Long Island-based jam band. Upcoming shows, live videos, merch, and updates.',
     type: 'website',
+    url: '/',
+    siteName: 'Arden',
     images: [{ url: '/og-image.jpg', width: 1200, height: 630 }],
   },
 }

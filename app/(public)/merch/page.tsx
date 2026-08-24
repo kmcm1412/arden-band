@@ -10,6 +10,13 @@ export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Merch — Arden',
   description: 'Arden band merch — tees, caps, and more. Available at shows and by direct order.',
+
+  alternates: { canonical: '/merch' },
+  openGraph: {
+    url: '/merch',
+    siteName: 'Arden',
+    description: 'Arden band merch — tees, caps, and more. Available at shows and by direct order.',
+  },
 }
 
 async function getMerch(): Promise<MerchItem[]> {
