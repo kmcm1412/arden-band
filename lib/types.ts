@@ -49,6 +49,15 @@ export interface Show {
   payouts?: ShowPayouts
   /** Financial edits awaiting a second pair of eyes — see PendingEdit */
   pendingEdits?: PendingEdit[]
+  /**
+   * What the band actually played, in order, filled in after the show. Distinct
+   * from the `setlists` collection, which is what they planned to play.
+   */
+  actualSetList?: string[]
+  /** Links to audio or video from the night */
+  recordings?: ShowRecording[]
+  /** Posts about the show, on whichever platform they landed */
+  socialPosts?: SocialPost[]
   /** Post-show numbers, filled in by the band afterwards */
   stats?: ShowStats
   notes?: string
@@ -144,6 +153,27 @@ export interface ShowPayouts {
   totalPaid: number
   /** What stayed behind for shared costs, as recorded when the split was made */
   bandFund: number
+}
+
+/** A link to audio or video of the show. Not financial — saves without review. */
+export interface ShowRecording {
+  /** Stable key for list rendering and removal */
+  id: string
+  title: string
+  /** Normalized http(s) URL; anything else is rejected before it gets here */
+  url: string
+  /** "Full set", "Single song", and so on */
+  type?: string
+}
+
+/** A social post about the show. Not financial — saves without review. */
+export interface SocialPost {
+  /** Stable key for list rendering and removal */
+  id: string
+  url: string
+  /** Derived from the URL's host at save time, e.g. "Instagram" */
+  platform: string
+  note?: string
 }
 
 /** The financial areas a pending edit can cover */

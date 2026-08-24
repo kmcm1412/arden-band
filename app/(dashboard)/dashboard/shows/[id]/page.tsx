@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { db } from '@/lib/firebase/client'
-import { doc, getDoc, updateDoc, runTransaction } from 'firebase/firestore'
-import { Show, TicketSale, ShowStats, TicketOrder, ShowExpense, DoorSales, ShowPayouts, Membership, PendingEdit, PendingEditField, FinanceApproval } from '@/lib/types'
+import { doc, getDoc, updateDoc, runTransaction, collection, getDocs } from 'firebase/firestore'
+import { Show, TicketSale, ShowStats, TicketOrder, ShowExpense, DoorSales, ShowPayouts, Membership, PendingEdit, PendingEditField, FinanceApproval, ShowRecording, SocialPost, SetList } from '@/lib/types'
 import { parseVenmoPaste, showFinancials } from '@/lib/tickets'
 import { isTrustedEditor, withPendingEdit, clearPendingFor, pendingFor, describeValue, FIELD_LABELS } from '@/lib/approvals'
 import { useAuth } from '@/lib/auth/context'
@@ -19,11 +19,19 @@ import ShowExpenses from '@/components/dashboard/ShowExpenses'
 import DoorSalesInput from '@/components/dashboard/DoorSalesInput'
 import ShowPayoutsEditor from '@/components/dashboard/ShowPayoutsEditor'
 import PendingEditsPanel, { PendingTag } from '@/components/dashboard/PendingEditsPanel'
+import ActualSetList from '@/components/dashboard/ActualSetList'
+import { ShowRecordings, ShowSocialPosts } from '@/components/dashboard/ShowMediaLinks'
 
 const IMPORT_PLACEHOLDER = [
   '2 tickets - $20 (The Delancey): Kyle, Sam',
   'Jane Doe, 1, 10',
 ].join('\n')
+
+const EXTRA_ACTIONS = {
+  actualSetList: 'updated the played set list',
+  recordings: 'updated show recordings',
+  socialPosts: 'updated show social posts',
+} as const
 
 const EMPTY_SALE = { name: '', qty: 1, method: 'venmo' as TicketSale['method'], amount: 0, note: '' }
 const EMPTY_STATS: ShowStats = { attendance: undefined, payout: undefined, costs: undefined, merchSales: undefined, notes: '' }
@@ -64,6 +72,8 @@ function ShowDetailContent() {
   const [roster, setRoster] = useState<Membership[]>([])
   const [approval, setApproval] = useState<FinanceApproval | null>(null)
   const [reviewBusy, setReviewBusy] = useState<string | null>(null)
+  const [extrasBusy, setExtrasBusy] = useState<string | null>(null)
+  const [plannedSongs, setPlannedSongs] = useState<string[]>([])
 
   const loadShow = useCallback(async (resetStats = false) => {
     if (!params?.id) return
@@ -114,6 +124,25 @@ function ShowDetailContent() {
     loadOrders()
   }, [loadOrders])
 
+  // The planned set list for this show, so "What We Played" can start from it.
+  // Read straight from Firestore — setlists are readable by any member.
+  useEffect(() => {
+    if (!params?.id) return
+    getDocs(collection(db, 'setlists'))
+      .then(snap => {
+        const match = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }) as SetList)
+          .find(l => l.showId === params.id)
+        const titles = (match?.songs || [])
+          .slice()
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .map(song => song.title)
+          .filter(Boolean)
+        setPlannedSongs(titles)
+      })
+      .catch(err => console.error('Failed to load planned set list:', err))
+  }, [params?.id])
+
   // Who may edit finances unreviewed. A failed or missing read leaves this null
   // and isTrustedEditor falls back to the built-in list, so the review step is
   // never skipped just because config could not be fetched.
@@ -150,6 +179,38 @@ function ShowDetailContent() {
   const pendingOrders = orders.filter(o => o.status === 'pending')
   // Undefined means enabled: shows created before the toggle keep selling
   const ticketSalesEnabled = show?.ticketSalesEnabled !== false
+
+  const actualSetList = useMemo(() => show?.actualSetList || [], [show?.actualSetList])
+  const recordings = useMemo(() => show?.recordings || [], [show?.recordings])
+  const socialPosts = useMemo(() => show?.socialPosts || [], [show?.socialPosts])
+
+  /**
+   * Writer for the sections that aren't money — set list, recordings, posts.
+   *
+   * Deliberately does not touch `pendingEdits`: none of this is financial, so
+   * none of it waits on a second signature. Kept separate from the financial
+   * writers so that stays true by construction rather than by remembering.
+   */
+  const persistExtra = async (
+    field: 'actualSetList' | 'recordings' | 'socialPosts',
+    value: unknown,
+    detail: string
+  ) => {
+    if (!show?.id) return
+    setExtrasBusy(field)
+    setError('')
+    try {
+      await updateDoc(doc(db, 'shows', show.id), { [field]: value })
+      setShow(s => (s ? { ...s, [field]: value } : s))
+      logActivity(user, EXTRA_ACTIONS[field], `${show.venue} · ${detail}`)
+    } catch (err) {
+      console.error(`Failed to save ${field}:`, err)
+      setError('Could not save that. Are you an admin?')
+      loadShow().catch(() => {})
+    } finally {
+      setExtrasBusy(null)
+    }
+  }
 
   const pendingEdits = useMemo(() => show?.pendingEdits || [], [show?.pendingEdits])
   const trustedEditor = isTrustedEditor(user?.email, approval)
@@ -837,6 +898,35 @@ function ShowDetailContent() {
         busy={payoutsBusy}
         pending={pendingFor(pendingEdits, 'payouts')}
         onChange={persistPayouts}
+      />
+
+      {/* Non-financial extras — no review step applies to any of these */}
+      <ActualSetList
+        songs={actualSetList}
+        isAdmin={isAdmin}
+        busy={extrasBusy === 'actualSetList'}
+        plannedSongs={plannedSongs}
+        onChange={next =>
+          persistExtra('actualSetList', next, `${next.length} song${next.length === 1 ? '' : 's'}`)
+        }
+      />
+
+      <ShowRecordings
+        recordings={recordings}
+        isAdmin={isAdmin}
+        busy={extrasBusy === 'recordings'}
+        onChange={(next: ShowRecording[]) =>
+          persistExtra('recordings', next, `${next.length} recording${next.length === 1 ? '' : 's'}`)
+        }
+      />
+
+      <ShowSocialPosts
+        posts={socialPosts}
+        isAdmin={isAdmin}
+        busy={extrasBusy === 'socialPosts'}
+        onChange={(next: SocialPost[]) =>
+          persistExtra('socialPosts', next, `${next.length} post${next.length === 1 ? '' : 's'}`)
+        }
       />
 
       {/* Post-show stats */}
