@@ -10,7 +10,7 @@ import { Plus, Pencil, Trash2, Upload, ImageIcon, Eye, EyeOff } from 'lucide-rea
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 import { useAuth } from '@/lib/auth/context'
 import { logActivity } from '@/lib/activity'
-import { compressImage } from '@/lib/image'
+import { compressImageDetailed } from '@/lib/image'
 
 const EMPTY_ITEM: Omit<MerchItem, 'id'> = {
   name: '',
@@ -131,8 +131,15 @@ function MerchPageContent() {
     setUploading(true)
     setError('')
     try {
-      const dataUrl = await compressImage(file, 800)
-      setForm(f => ({ ...f, imageUrl: dataUrl }))
+      // Item photos live inline on the merch document, and the public merch
+      // page loads all of them at once — keep each one small
+      const result = await compressImageDetailed(file, 600)
+      setForm(f => ({ ...f, imageUrl: result.dataUrl }))
+      if (result.overBudget) {
+        setError(
+          `Photo saved at ${Math.round(result.bytes / 1024)}KB, larger than ideal — a tighter crop will compress further.`
+        )
+      }
     } catch (err) {
       console.error('Failed to process image:', err)
       setError('Failed to process image.')

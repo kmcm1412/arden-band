@@ -11,17 +11,22 @@
  * stay locked regardless, so an injected external script still has nowhere to
  * go.
  */
+// next dev drives HMR and React Refresh through eval, which CSP blocks without
+// 'unsafe-eval'. Production webpack output contains no eval, so the allowance is
+// scoped to development rather than weakening the policy that ships.
+const isDev = process.env.NODE_ENV === 'development'
+
 const CSP = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.youtube.com https://s.ytimg.com",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://apis.google.com https://www.gstatic.com https://www.youtube.com https://s.ytimg.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://i.ytimg.com https://img.youtube.com https://*.googleusercontent.com https://firebasestorage.googleapis.com https://storage.googleapis.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com wss://*.firebaseio.com",
+  `connect-src 'self'${isDev ? ' ws://localhost:* http://localhost:*' : ''} https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com wss://*.firebaseio.com`,
   "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://w.soundcloud.com https://accounts.google.com https://ardenapp-d8ff5.firebaseapp.com",
   "media-src 'self' https://w.soundcloud.com",
   "worker-src 'self' blob:",

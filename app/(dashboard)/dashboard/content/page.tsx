@@ -8,7 +8,7 @@ import Link from 'next/link'
 import DashboardGuard from '@/components/dashboard/DashboardGuard'
 import { useAuth } from '@/lib/auth/context'
 import { logActivity } from '@/lib/activity'
-import { compressImage } from '@/lib/image'
+import { compressImageDetailed } from '@/lib/image'
 import { ABOUT_IMAGE_FALLBACK } from '@/lib/site'
 
 interface SiteContent {
@@ -93,6 +93,7 @@ function ContentPageContent() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [imageNote, setImageNote] = useState('')
   const [liveNote, setLiveNote] = useState('')
   const [remoteContentPending, setRemoteContentPending] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -188,8 +189,15 @@ function ContentPageContent() {
     setUploading(true)
     setError('')
     try {
-      const dataUrl = await compressImage(file, 800)
-      setContent(c => ({ ...c, aboutImage: dataUrl }))
+      // Stored inline in the site-content document, which every page render
+      // reads — so the encoded size matters, and is reported back
+      const result = await compressImageDetailed(file, 800)
+      setContent(c => ({ ...c, aboutImage: result.dataUrl }))
+      setImageNote(
+        result.overBudget
+          ? `Saved at ${Math.round(result.bytes / 1024)}KB — larger than ideal. A more tightly cropped photo will compress further.`
+          : `Saved at ${Math.round(result.bytes / 1024)}KB (${result.width}x${result.height}).`
+      )
     } catch (err: unknown) {
       console.error('Failed to process image:', err)
       setError(err instanceof Error ? err.message : 'Failed to process image.')
@@ -417,6 +425,7 @@ function ContentPageContent() {
                   <p className="text-xs text-arden-subtext">
                     Square image recommended. Hit &quot;Save Changes&quot; after selecting.
                   </p>
+                  {imageNote && <p className="text-xs text-arden-accent">{imageNote}</p>}
                   {!content.aboutImage && (
                     <p className="text-xs text-arden-subtext">
                       Showing the built-in photo. Uploading one stores it inside the site
