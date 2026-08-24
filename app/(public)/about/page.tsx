@@ -1,19 +1,15 @@
+import type { Metadata } from 'next'
 import { Camera, Play } from 'lucide-react'
 import { getSiteContent } from '@/lib/site-content'
 import ContactForm from '@/components/ContactForm'
+import { pageMetadata } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: '/about',
   title: 'About — Arden',
   description: 'Meet Arden — a genre-blending Long Island jam band. The story, the members, and how to get in touch.',
-
-  alternates: { canonical: '/about' },
-  openGraph: {
-    url: '/about',
-    siteName: 'Arden',
-    description: 'Meet Arden — a genre-blending Long Island jam band. The story, the members, and how to get in touch.',
-  },
-}
+})
 
 export default async function AboutPage() {
   const content = await getSiteContent()

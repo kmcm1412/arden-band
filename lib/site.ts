@@ -1,3 +1,5 @@
+import type { Metadata } from 'next'
+
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ardenband.com'
 export const SITE_NAME = 'Arden'
 export const SITE_DESCRIPTION =
@@ -21,4 +23,44 @@ export const ABOUT_IMAGE_FALLBACK = '/about.jpg'
 /** Prefers an explicitly set URL, falling back to the static file */
 export function resolveAboutImage(value?: string | null): string {
   return (value || '').trim() || ABOUT_IMAGE_FALLBACK
+}
+
+/** The share card image, 1200x630, referenced by every page */
+export const OG_IMAGE = { url: '/og-image.jpg', width: 1200, height: 630 }
+
+/**
+ * Complete metadata for one public page.
+ *
+ * Next.js merges metadata shallowly per top-level key: a page that declares
+ * `openGraph` replaces the parent's object outright rather than merging into it.
+ * Adding just a `url` to each page therefore dropped og:image and og:type — and
+ * with them the Twitter card image, which Next derives from openGraph when no
+ * explicit `twitter` key exists. Every share of /shows, /about, /media and
+ * /links lost its preview picture, silently, while the build stayed green.
+ *
+ * Building the whole object here means a page cannot supply half of it.
+ */
+export function pageMetadata({
+  path,
+  title,
+  description,
+}: {
+  /** Root-relative, resolved against metadataBase */
+  path: string
+  title: string
+  description: string
+}): Metadata {
+  return {
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      url: path,
+      siteName: SITE_NAME,
+      images: [OG_IMAGE],
+    },
+  }
 }

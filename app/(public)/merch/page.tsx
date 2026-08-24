@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 /* eslint-disable @next/next/no-img-element */
 import { notFound } from 'next/navigation'
 import { ShoppingBag } from 'lucide-react'
@@ -5,19 +6,14 @@ import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
 import { getSiteContent } from '@/lib/site-content'
 import type { MerchItem } from '@/lib/types'
+import { pageMetadata } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: '/merch',
   title: 'Merch — Arden',
   description: 'Arden band merch — tees, caps, and more. Available at shows and by direct order.',
-
-  alternates: { canonical: '/merch' },
-  openGraph: {
-    url: '/merch',
-    siteName: 'Arden',
-    description: 'Arden band merch — tees, caps, and more. Available at shows and by direct order.',
-  },
-}
+})
 
 async function getMerch(): Promise<MerchItem[]> {
   try {

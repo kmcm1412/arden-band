@@ -1,25 +1,20 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { MapPin, ExternalLink } from 'lucide-react'
 import { adminDb } from '@/lib/firebase/admin'
 import { getVisibility } from '@/lib/visibility'
 import { getSiteContent } from '@/lib/site-content'
-import { SITE_URL } from '@/lib/site'
 import VenmoTicketWidget from '@/components/VenmoTicketWidget'
 import { resolveNameMode } from '@/lib/tickets'
 import { parseShowDate, formatInEastern, toEasternIso } from '@/lib/utils'
+import { SITE_URL, pageMetadata } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: '/shows',
   title: 'Shows — Arden',
   description: 'Upcoming Arden shows on Long Island and beyond — dates, venues, and tickets.',
-
-  alternates: { canonical: '/shows' },
-  openGraph: {
-    url: '/shows',
-    siteName: 'Arden',
-    description: 'Upcoming Arden shows on Long Island and beyond — dates, venues, and tickets.',
-  },
-}
+})
 
 async function getShows() {
   try {

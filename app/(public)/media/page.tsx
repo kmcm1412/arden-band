@@ -1,21 +1,17 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getVisibility } from '@/lib/visibility'
 import { getMergedVideos } from '@/lib/youtube'
 import { getSiteContent } from '@/lib/site-content'
 import LiteYouTube from '@/components/LiteYouTube'
+import { pageMetadata } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: '/media',
   title: 'Media — Arden',
   description: 'Watch Arden live — full sets, jams, and sessions from the Long Island jam band.',
-
-  alternates: { canonical: '/media' },
-  openGraph: {
-    url: '/media',
-    siteName: 'Arden',
-    description: 'Watch Arden live — full sets, jams, and sessions from the Long Island jam band.',
-  },
-}
+})
 
 export default async function MediaPage() {
   const visibility = await getVisibility()

@@ -1,22 +1,18 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { adminDb } from '@/lib/firebase/admin'
 import { parseShowDate, formatInEastern } from '@/lib/utils'
 import { getVisibility } from '@/lib/visibility'
 import { getSiteContent } from '@/lib/site-content'
 import { SoundCloudIcon, YouTubeIcon, InstagramIcon } from '@/components/BrandIcons'
+import { pageMetadata } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: '/links',
   title: 'Arden — Links',
   description: 'Listen, watch, and follow Arden — Long Island jam band.',
-
-  alternates: { canonical: '/links' },
-  openGraph: {
-    url: '/links',
-    siteName: 'Arden',
-    description: 'Listen, watch, and follow Arden — Long Island jam band.',
-  },
-}
+})
 
 interface BioLink {
   href: string
