@@ -36,7 +36,7 @@ export default async function Footer() {
               target="_blank"
               rel="me noopener noreferrer"
               aria-label="Arden on Instagram"
-              className="text-arden-subtext hover:text-arden-accent transition-colors"
+              className="flex items-center justify-center w-11 h-11 -m-2.5 text-arden-subtext hover:text-arden-accent transition-colors"
             >
               <InstagramIcon size={18} />
             </a>
@@ -45,7 +45,7 @@ export default async function Footer() {
               target="_blank"
               rel="me noopener noreferrer"
               aria-label="Arden on YouTube"
-              className="text-arden-subtext hover:text-arden-accent transition-colors"
+              className="flex items-center justify-center w-11 h-11 -m-2.5 text-arden-subtext hover:text-arden-accent transition-colors"
             >
               <YouTubeIcon size={18} />
             </a>
@@ -55,7 +55,7 @@ export default async function Footer() {
                 target="_blank"
                 rel="me noopener noreferrer"
                 aria-label="Arden on SoundCloud"
-                className="text-arden-subtext hover:text-arden-accent transition-colors"
+                className="flex items-center justify-center w-11 h-11 -m-2.5 text-arden-subtext hover:text-arden-accent transition-colors"
               >
                 <SoundCloudIcon size={18} />
               </a>

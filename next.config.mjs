@@ -21,7 +21,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://i.ytimg.com https://img.youtube.com https://*.googleusercontent.com https://firebasestorage.googleapis.com https://storage.googleapis.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com wss://*.firebaseio.com",
+  "connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com wss://*.firebaseio.com",
   "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://w.soundcloud.com https://accounts.google.com https://ardenapp-d8ff5.firebaseapp.com",
   "media-src 'self' https://w.soundcloud.com",
   "worker-src 'self' blob:",

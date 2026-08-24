@@ -69,7 +69,7 @@ export default function Nav({ visibility }: { visibility: SectionVisibility }) {
         </ul>
 
         <button
-          className="md:hidden text-arden-text p-2"
+          className="md:hidden text-arden-text flex items-center justify-center w-11 h-11 -mr-2"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileOpen}

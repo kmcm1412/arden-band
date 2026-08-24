@@ -10,6 +10,11 @@ import { Play } from 'lucide-react'
  *
  * `vertical` renders a portrait (Shorts) thumbnail: tries the portrait asset
  * first and falls back to the standard 16:9 thumb if YouTube lacks one.
+ *
+ * Landscape thumbs ask for maxresdefault (1280x720) and drop to hqdefault
+ * (480x360) when YouTube has not generated one. The featured slot on the
+ * homepage renders over 1200px wide, where hqdefault was being upscaled 2.5x
+ * and looking soft.
  */
 export default function LiteYouTube({
   videoId,
@@ -35,10 +40,13 @@ export default function LiteYouTube({
     )
   }
 
-  const thumbSrc =
-    vertical && !thumbFailed
-      ? `https://i.ytimg.com/vi/${videoId}/oardefault.jpg`
-      : `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+  const thumbSrc = vertical
+    ? thumbFailed
+      ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+      : `https://i.ytimg.com/vi/${videoId}/oardefault.jpg`
+    : thumbFailed
+      ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+      : `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`
 
   const buttonSize = vertical ? 'w-12 h-12' : 'w-16 h-16'
   const iconSize = vertical ? 18 : 24
