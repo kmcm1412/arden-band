@@ -42,3 +42,8 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# service account keys — live private keys, never commit
+service-account.json
+*-firebase-adminsdk-*.json
+serviceAccountKey.json
