@@ -5,8 +5,9 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { db } from '@/lib/firebase/client'
 import { doc, getDoc, updateDoc, runTransaction } from 'firebase/firestore'
-import { Show, TicketSale, ShowStats, TicketOrder, ShowExpense, DoorSales, ShowPayouts, Membership } from '@/lib/types'
+import { Show, TicketSale, ShowStats, TicketOrder, ShowExpense, DoorSales, ShowPayouts, Membership, PendingEdit, PendingEditField, FinanceApproval } from '@/lib/types'
 import { parseVenmoPaste, showFinancials } from '@/lib/tickets'
+import { isTrustedEditor, withPendingEdit, clearPendingFor, pendingFor, describeValue, FIELD_LABELS } from '@/lib/approvals'
 import { useAuth } from '@/lib/auth/context'
 import { logActivity } from '@/lib/activity'
 import { formatDateTime, fmtMoney, roundMoney, parseShowDate } from '@/lib/utils'
@@ -17,6 +18,7 @@ import { GuestListExport, TicketSalesToggle } from '@/components/dashboard/Ticke
 import ShowExpenses from '@/components/dashboard/ShowExpenses'
 import DoorSalesInput from '@/components/dashboard/DoorSalesInput'
 import ShowPayoutsEditor from '@/components/dashboard/ShowPayoutsEditor'
+import PendingEditsPanel, { PendingTag } from '@/components/dashboard/PendingEditsPanel'
 
 const IMPORT_PLACEHOLDER = [
   '2 tickets - $20 (The Delancey): Kyle, Sam',
@@ -60,8 +62,10 @@ function ShowDetailContent() {
   const [doorBusy, setDoorBusy] = useState(false)
   const [payoutsBusy, setPayoutsBusy] = useState(false)
   const [roster, setRoster] = useState<Membership[]>([])
+  const [approval, setApproval] = useState<FinanceApproval | null>(null)
+  const [reviewBusy, setReviewBusy] = useState<string | null>(null)
 
-  const loadShow = useCallback(async () => {
+  const loadShow = useCallback(async (resetStats = false) => {
     if (!params?.id) return
     const snap = await getDoc(doc(db, 'shows', params.id))
     if (!snap.exists()) {
@@ -70,7 +74,10 @@ function ShowDetailContent() {
     }
     const data = { id: snap.id, ...snap.data() } as Show
     setShow(data)
-    setStatsForm(prev => (prev === EMPTY_STATS ? { ...EMPTY_STATS, ...(data.stats || {}) } : prev))
+    // Only clobber an in-progress edit when a review put the numbers back
+    setStatsForm(prev =>
+      resetStats || prev === EMPTY_STATS ? { ...EMPTY_STATS, ...(data.stats || {}) } : prev
+    )
   }, [params?.id])
 
   // Orders live behind the Admin SDK (they hold fan names), so they come from
@@ -107,6 +114,15 @@ function ShowDetailContent() {
     loadOrders()
   }, [loadOrders])
 
+  // Who may edit finances unreviewed. A failed or missing read leaves this null
+  // and isTrustedEditor falls back to the built-in list, so the review step is
+  // never skipped just because config could not be fetched.
+  useEffect(() => {
+    getDoc(doc(db, 'siteContent', 'financeApproval'))
+      .then(snap => setApproval(snap.exists() ? (snap.data() as FinanceApproval) : null))
+      .catch(err => console.error('Failed to load finance approval config:', err))
+  }, [])
+
   // Reference only — the payout split is entered by hand, not derived from this.
   // Members rules let admins read the roster; anyone else quietly gets nothing.
   useEffect(() => {
@@ -135,14 +151,74 @@ function ShowDetailContent() {
   // Undefined means enabled: shows created before the toggle keep selling
   const ticketSalesEnabled = show?.ticketSalesEnabled !== false
 
+  const pendingEdits = useMemo(() => show?.pendingEdits || [], [show?.pendingEdits])
+  const trustedEditor = isTrustedEditor(user?.email, approval)
+
+  /**
+   * Works out what `pendingEdits` should become alongside a financial write.
+   *
+   * A trusted member's edit settles anything open on that field — their word is
+   * the sign-off. Anyone else's is filed for review, carrying forward the
+   * original snapshot if they are editing something already pending.
+   */
+  const nextPendingEdits = (
+    field: PendingEditField,
+    previous: unknown,
+    nextValue: unknown,
+    current: PendingEdit[]
+  ): PendingEdit[] => {
+    if (trustedEditor) return clearPendingFor(current, field)
+    return withPendingEdit(current, {
+      id: genId(),
+      field,
+      summary: describeValue(field, nextValue),
+      previousSummary: describeValue(field, previous),
+      previous: previous ?? null,
+      byUid: user?.uid || '',
+      byName: membership?.displayName || user?.email || 'Unknown',
+      byEmail: (user?.email || '').toLowerCase(),
+      at: new Date().toISOString(),
+    })
+  }
+
+  const reviewEdit = async (edit: PendingEdit, action: 'confirm' | 'reject') => {
+    if (!user || !show?.id) return
+    setReviewBusy(edit.id)
+    setError('')
+    try {
+      const token = await user.getIdToken()
+      const res = await fetch('/api/shows/edits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ showId: show.id, editId: edit.id, action }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `HTTP ${res.status}`)
+      }
+      await loadShow(edit.field === 'stats')
+      logActivity(
+        user,
+        action === 'confirm' ? 'confirmed a financial change' : 'reverted a financial change',
+        `${FIELD_LABELS[edit.field]} on ${show.venue}, changed by ${edit.byName}`
+      )
+    } catch (err) {
+      console.error('Review failed:', err)
+      setError(err instanceof Error ? err.message : 'Could not review that change.')
+    } finally {
+      setReviewBusy(null)
+    }
+  }
+
   // Saved on edit rather than behind a save button, matching the sales toggle
   const persistExpenses = async (next: ShowExpense[]) => {
     if (!show?.id) return
     setExpensesBusy(true)
     setError('')
     try {
-      await updateDoc(doc(db, 'shows', show.id), { expenses: next })
-      setShow(s => (s ? { ...s, expenses: next } : s))
+      const nextPending = nextPendingEdits('expenses', expenses, next, pendingEdits)
+      await updateDoc(doc(db, 'shows', show.id), { expenses: next, pendingEdits: nextPending })
+      setShow(s => (s ? { ...s, expenses: next, pendingEdits: nextPending } : s))
       const total = next.reduce((n, e) => n + (e.amount || 0), 0)
       logActivity(user, 'updated show expenses', `${show.venue} · ${fmtMoney(total)} deducted`)
     } catch (err) {
@@ -160,8 +236,9 @@ function ShowDetailContent() {
     setDoorBusy(true)
     setError('')
     try {
-      await updateDoc(doc(db, 'shows', show.id), { doorSales: next })
-      setShow(s => (s ? { ...s, doorSales: next } : s))
+      const nextPending = nextPendingEdits('doorSales', show.doorSales ?? null, next, pendingEdits)
+      await updateDoc(doc(db, 'shows', show.id), { doorSales: next, pendingEdits: nextPending })
+      setShow(s => (s ? { ...s, doorSales: next, pendingEdits: nextPending } : s))
       logActivity(
         user,
         'updated door sales',
@@ -181,8 +258,9 @@ function ShowDetailContent() {
     setPayoutsBusy(true)
     setError('')
     try {
-      await updateDoc(doc(db, 'shows', show.id), { payouts: next })
-      setShow(s => (s ? { ...s, payouts: next } : s))
+      const nextPending = nextPendingEdits('payouts', show.payouts ?? null, next, pendingEdits)
+      await updateDoc(doc(db, 'shows', show.id), { payouts: next, pendingEdits: nextPending })
+      setShow(s => (s ? { ...s, payouts: next, pendingEdits: nextPending } : s))
       logActivity(
         user,
         'updated show payouts',
@@ -230,11 +308,15 @@ function ShowDetailContent() {
       const next = await runTransaction(db, async txn => {
         const snap = await txn.get(ref)
         const current = (snap.data()?.ticketSales || []) as TicketSale[]
+        const currentPending = (snap.data()?.pendingEdits || []) as PendingEdit[]
         const result = mutate(current)
-        txn.update(ref, { ticketSales: result })
-        return result
+        // Read from the snapshot, not local state, so a concurrent edit's
+        // pending record survives this write
+        const nextPending = nextPendingEdits('ticketSales', current, result, currentPending)
+        txn.update(ref, { ticketSales: result, pendingEdits: nextPending })
+        return { result, nextPending }
       })
-      setShow(s => (s ? { ...s, ticketSales: next } : s))
+      setShow(s => (s ? { ...s, ticketSales: next.result, pendingEdits: next.nextPending } : s))
       logActivity(user, action, detail)
       return true
     } catch (err) {
@@ -360,8 +442,9 @@ function ShowDetailContent() {
       const clean = Object.fromEntries(
         Object.entries(statsForm).filter(([, v]) => v !== undefined && v !== '')
       )
-      await updateDoc(doc(db, 'shows', show.id), { stats: clean })
-      setShow(s => (s ? { ...s, stats: clean as ShowStats } : s))
+      const nextPending = nextPendingEdits('stats', show.stats ?? null, clean, pendingEdits)
+      await updateDoc(doc(db, 'shows', show.id), { stats: clean, pendingEdits: nextPending })
+      setShow(s => (s ? { ...s, stats: clean as ShowStats, pendingEdits: nextPending } : s))
       logActivity(user, 'updated show stats', show.venue)
       setStatsSaved(true)
       setTimeout(() => setStatsSaved(false), 3000)
@@ -409,6 +492,13 @@ function ShowDetailContent() {
       {error && (
         <div className="mb-6 p-4 bg-red-900/20 border border-red-900 text-red-400 text-sm">{error}</div>
       )}
+
+      <PendingEditsPanel
+        edits={pendingEdits}
+        currentUid={user?.uid}
+        busyId={reviewBusy}
+        onReview={reviewEdit}
+      />
 
       {/* Summary tiles */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
@@ -606,6 +696,7 @@ function ShowDetailContent() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase flex items-center gap-2">
             <Ticket size={14} /> Ticket Sales
+            <PendingTag edit={pendingFor(pendingEdits, 'ticketSales')} />
           </h2>
           {isAdmin && !addingSale && (
             <button onClick={() => {
@@ -726,6 +817,7 @@ function ShowDetailContent() {
         doorSales={doorSales}
         isAdmin={isAdmin}
         busy={doorBusy}
+        pending={pendingFor(pendingEdits, 'doorSales')}
         onChange={persistDoorSales}
       />
 
@@ -733,6 +825,7 @@ function ShowDetailContent() {
         expenses={expenses}
         isAdmin={isAdmin}
         busy={expensesBusy}
+        pending={pendingFor(pendingEdits, 'expenses')}
         onChange={persistExpenses}
       />
 
@@ -742,6 +835,7 @@ function ShowDetailContent() {
         roster={roster}
         isAdmin={isAdmin}
         busy={payoutsBusy}
+        pending={pendingFor(pendingEdits, 'payouts')}
         onChange={persistPayouts}
       />
 
@@ -749,6 +843,7 @@ function ShowDetailContent() {
       <div>
         <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase flex items-center gap-2 mb-4">
           <DollarSign size={14} /> Show Numbers
+          <PendingTag edit={pendingFor(pendingEdits, 'stats')} />
         </h2>
         <div className="bg-arden-surface border border-arden-border p-5">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Plus, Trash2, Receipt } from 'lucide-react'
-import type { ShowExpense } from '@/lib/types'
+import type { ShowExpense, PendingEdit } from '@/lib/types'
+import { PendingTag } from '@/components/dashboard/PendingEditsPanel'
 import { fmtMoney, roundMoney } from '@/lib/utils'
 
 /** The deductions that come up on almost every show */
@@ -26,11 +27,14 @@ export default function ShowExpenses({
   expenses,
   isAdmin,
   busy,
+  pending,
   onChange,
 }: {
   expenses: ShowExpense[]
   isAdmin: boolean
   busy?: boolean
+  /** Set when this section is waiting on someone to sign it off */
+  pending?: PendingEdit
   onChange: (next: ShowExpense[]) => void
 }) {
   const [rows, setRows] = useState<ShowExpense[]>(expenses)
@@ -73,6 +77,7 @@ export default function ShowExpenses({
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase flex items-center gap-2">
           <Receipt size={14} /> Expenses
+          <PendingTag edit={pending} />
         </h2>
         {total > 0 && (
           <span className="text-arden-white font-mono text-sm">−{fmtMoney(total)}</span>

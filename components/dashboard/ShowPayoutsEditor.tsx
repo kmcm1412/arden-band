@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Users, AlertTriangle } from 'lucide-react'
-import type { ShowPayouts, Membership } from '@/lib/types'
+import type { ShowPayouts, Membership, PendingEdit } from '@/lib/types'
+import { PendingTag } from '@/components/dashboard/PendingEditsPanel'
 import { DEFAULT_BAND_SIZE } from '@/lib/tickets'
 import { fmtMoney, roundMoney } from '@/lib/utils'
 
@@ -26,6 +27,7 @@ export default function ShowPayoutsEditor({
   roster,
   isAdmin,
   busy,
+  pending,
   onChange,
 }: {
   payouts?: ShowPayouts
@@ -35,6 +37,8 @@ export default function ShowPayoutsEditor({
   roster?: Membership[]
   isAdmin: boolean
   busy?: boolean
+  /** Set when this section is waiting on someone to sign it off */
+  pending?: PendingEdit
   onChange: (next: ShowPayouts) => void
 }) {
   const [draft, setDraft] = useState<Draft>({
@@ -76,6 +80,7 @@ export default function ShowPayoutsEditor({
     <div className="mb-10">
       <h2 className="text-sm font-medium text-arden-accent tracking-wider uppercase flex items-center gap-2 mb-4">
         <Users size={14} /> Payouts
+        <PendingTag edit={pending} />
       </h2>
 
       <div className="bg-arden-surface border border-arden-border p-5">

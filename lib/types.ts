@@ -47,6 +47,8 @@ export interface Show {
   doorSales?: DoorSales
   /** How the night's net was split between the members and the shared fund */
   payouts?: ShowPayouts
+  /** Financial edits awaiting a second pair of eyes — see PendingEdit */
+  pendingEdits?: PendingEdit[]
   /** Post-show numbers, filled in by the band afterwards */
   stats?: ShowStats
   notes?: string
@@ -142,6 +144,47 @@ export interface ShowPayouts {
   totalPaid: number
   /** What stayed behind for shared costs, as recorded when the split was made */
   bandFund: number
+}
+
+/** The financial areas a pending edit can cover */
+export type PendingEditField = 'doorSales' | 'expenses' | 'payouts' | 'ticketSales' | 'stats'
+
+/**
+ * A financial change made by someone outside the trusted list, waiting for
+ * another member to sign off.
+ *
+ * The change is already live — the show doc holds the new value, so totals stay
+ * readable and nobody is blocked. What is kept here is the snapshot needed to
+ * put it back if the edit is rejected, plus enough context for whoever reviews
+ * it to know what they are approving.
+ */
+export interface PendingEdit {
+  id: string
+  field: PendingEditField
+  /** What the value is now, in words */
+  summary: string
+  /** What it was before, in words */
+  previousSummary: string
+  /**
+   * The prior value, stored raw so a rejection restores exactly what was there.
+   * The new value is deliberately not duplicated — it is live on the show doc.
+   */
+  previous: unknown
+  byUid: string
+  byName: string
+  byEmail: string
+  at: string
+}
+
+/**
+ * Who may change show finances without a second signature. Lives in Firestore
+ * at siteContent/financeApproval so the band can revise it without a deploy.
+ */
+export interface FinanceApproval {
+  /** Lowercased emails whose financial edits apply immediately */
+  trustedEmails: string[]
+  /** Set false to let everyone edit freely, e.g. while sorting out a mess */
+  enabled: boolean
 }
 
 /** One line item taken off the top, e.g. { label: 'Door & Sound', amount: 150 } */
