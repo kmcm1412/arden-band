@@ -1,5 +1,5 @@
 import { fmtMoney, roundMoney, formatDateTime, toEasternIso } from '@/lib/utils'
-import type { TicketSale, ShowExpense, DoorSales } from '@/lib/types'
+import type { TicketSale, ShowExpense, DoorSales, ShowPayouts } from '@/lib/types'
 
 export type TicketNameMode = 'none' | 'party' | 'all'
 
@@ -280,6 +280,12 @@ export function guestListFilename(venue: string, datetime?: string): string {
 
 // ─── Show money ─────────────────────────────────────────────────────────────
 
+/**
+ * Arden's current lineup size, used only to seed a new show's split. Each show
+ * stores its own memberCount, so changing this never rewrites an old payout.
+ */
+export const DEFAULT_BAND_SIZE = 4
+
 export interface ShowFinancials {
   /** Presale tickets — the ones with names attached */
   ticketsSold: number
@@ -297,8 +303,16 @@ export interface ShowFinancials {
   gross: number
   /** Everything out: itemized expenses plus the free-form costs field */
   outgoings: number
-  /** What the band actually keeps */
-  bandPayout: number
+  /** Gross less outgoings — the night's takings before anyone is paid */
+  netRevenue: number
+  /** Handed to members, once a split has been recorded */
+  memberPayouts: number
+  /** Left in the shared fund after members are paid */
+  bandFund: number
+  /** Net that nobody has divided up yet — zero once a split exists */
+  unallocated: number
+  /** Whether a split has been recorded at all */
+  hasPayouts: boolean
 }
 
 /**
@@ -315,6 +329,7 @@ export function showFinancials(show: {
   ticketSales?: TicketSale[]
   expenses?: ShowExpense[]
   doorSales?: DoorSales
+  payouts?: ShowPayouts
   stats?: { payout?: number; merchSales?: number; costs?: number }
 }): ShowFinancials {
   const sales = show.ticketSales || []
@@ -330,6 +345,13 @@ export function showFinancials(show: {
     ticketRevenue + doorRevenue + (stats.payout || 0) + (stats.merchSales || 0)
   )
   const outgoings = roundMoney(expensesTotal + (stats.costs || 0))
+  const netRevenue = roundMoney(gross - outgoings)
+
+  // A show only contributes to the fund once someone has actually decided the
+  // split. Treating undivided net as fund money would report a balance the band
+  // has not agreed on yet, so it is reported separately as unallocated.
+  const hasPayouts = Boolean(show.payouts)
+  const memberPayouts = roundMoney(show.payouts?.totalPaid || 0)
   return {
     ticketsSold,
     doorCount,
@@ -339,6 +361,12 @@ export function showFinancials(show: {
     expensesTotal,
     gross,
     outgoings,
-    bandPayout: roundMoney(gross - outgoings),
+    netRevenue,
+    memberPayouts,
+    // Recomputed from live net rather than trusting the stored figure, so an
+    // expense edited after the split shows up instead of quietly disagreeing
+    bandFund: hasPayouts ? roundMoney(netRevenue - memberPayouts) : 0,
+    unallocated: hasPayouts ? 0 : netRevenue,
+    hasPayouts,
   }
 }

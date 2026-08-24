@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { db } from '@/lib/firebase/client'
 import { doc, getDoc, updateDoc, runTransaction } from 'firebase/firestore'
-import { Show, TicketSale, ShowStats, TicketOrder, ShowExpense, DoorSales } from '@/lib/types'
+import { Show, TicketSale, ShowStats, TicketOrder, ShowExpense, DoorSales, ShowPayouts, Membership } from '@/lib/types'
 import { parseVenmoPaste, showFinancials } from '@/lib/tickets'
 import { useAuth } from '@/lib/auth/context'
 import { logActivity } from '@/lib/activity'
@@ -16,6 +16,7 @@ import { SaleRow, OrderRow, useExpandedRow } from '@/components/dashboard/Ticket
 import { GuestListExport, TicketSalesToggle } from '@/components/dashboard/TicketControls'
 import ShowExpenses from '@/components/dashboard/ShowExpenses'
 import DoorSalesInput from '@/components/dashboard/DoorSalesInput'
+import ShowPayoutsEditor from '@/components/dashboard/ShowPayoutsEditor'
 
 const IMPORT_PLACEHOLDER = [
   '2 tickets - $20 (The Delancey): Kyle, Sam',
@@ -57,6 +58,8 @@ function ShowDetailContent() {
   const [salesToggleBusy, setSalesToggleBusy] = useState(false)
   const [expensesBusy, setExpensesBusy] = useState(false)
   const [doorBusy, setDoorBusy] = useState(false)
+  const [payoutsBusy, setPayoutsBusy] = useState(false)
+  const [roster, setRoster] = useState<Membership[]>([])
 
   const loadShow = useCallback(async () => {
     if (!params?.id) return
@@ -104,6 +107,18 @@ function ShowDetailContent() {
     loadOrders()
   }, [loadOrders])
 
+  // Reference only — the payout split is entered by hand, not derived from this.
+  // Members rules let admins read the roster; anyone else quietly gets nothing.
+  useEffect(() => {
+    if (!user || !isAdmin) return
+    user
+      .getIdToken()
+      .then(token => fetch('/api/admin/members', { headers: { Authorization: `Bearer ${token}` } }))
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => data && setRoster(data.members || []))
+      .catch(err => console.error('Failed to load members:', err))
+  }, [user, isAdmin])
+
 
   const sales = show?.ticketSales || []
   // Memoized because `|| []` would otherwise mint a new array on every render,
@@ -112,7 +127,8 @@ function ShowDetailContent() {
   const stats = show?.stats || {}
   // One shared calculation, so this page and the history page can't disagree
   const doorSales = show?.doorSales
-  const money = showFinancials({ ticketSales: sales, expenses, doorSales, stats })
+  const payouts = show?.payouts
+  const money = showFinancials({ ticketSales: sales, expenses, doorSales, payouts, stats })
   const { ticketsSold, ticketRevenue } = money
   const isPast = show ? parseShowDate(show.datetime) <= new Date() : false
   const pendingOrders = orders.filter(o => o.status === 'pending')
@@ -157,6 +173,27 @@ function ShowDetailContent() {
       loadShow().catch(() => {})
     } finally {
       setDoorBusy(false)
+    }
+  }
+
+  const persistPayouts = async (next: ShowPayouts) => {
+    if (!show?.id) return
+    setPayoutsBusy(true)
+    setError('')
+    try {
+      await updateDoc(doc(db, 'shows', show.id), { payouts: next })
+      setShow(s => (s ? { ...s, payouts: next } : s))
+      logActivity(
+        user,
+        'updated show payouts',
+        `${show.venue} · ${fmtMoney(next.perMember)} x ${next.memberCount} · ${fmtMoney(next.bandFund)} to the fund`
+      )
+    } catch (err) {
+      console.error('Failed to save payouts:', err)
+      setError('Could not save payouts. Are you an admin?')
+      loadShow().catch(() => {})
+    } finally {
+      setPayoutsBusy(false)
     }
   }
 
@@ -374,7 +411,7 @@ function ShowDetailContent() {
       )}
 
       {/* Summary tiles */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
         <div className="bg-arden-surface border border-arden-border p-4">
           <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Tickets Sold</p>
           <p className="text-arden-white font-display font-bold text-2xl">{money.totalTickets}</p>
@@ -406,13 +443,38 @@ function ShowDetailContent() {
           )}
         </div>
         <div className="bg-arden-surface border border-arden-border p-4">
-          <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Band Payout</p>
+          <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Net Revenue</p>
           <p
             className={`font-display font-bold text-2xl ${
-              money.bandPayout >= 0 ? 'text-arden-accent' : 'text-red-400'
+              money.netRevenue >= 0 ? 'text-arden-white' : 'text-red-400'
             }`}
           >
-            {fmtMoney(money.bandPayout)}
+            {fmtMoney(money.netRevenue)}
+          </p>
+          <p className="text-arden-subtext text-[10px] mt-1">gross less expenses</p>
+        </div>
+        <div className="bg-arden-surface border border-arden-border p-4">
+          <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Member Payouts</p>
+          <p className="text-arden-white font-display font-bold text-2xl">
+            {fmtMoney(money.memberPayouts)}
+          </p>
+          {money.hasPayouts && payouts && (
+            <p className="text-arden-subtext text-[10px] mt-1">
+              {fmtMoney(payouts.perMember)} × {payouts.memberCount}
+            </p>
+          )}
+        </div>
+        <div className="bg-arden-surface border border-arden-border p-4">
+          <p className="text-arden-subtext text-xs tracking-widest uppercase mb-1.5">Band Fund</p>
+          <p
+            className={`font-display font-bold text-2xl ${
+              money.bandFund >= 0 ? 'text-arden-accent' : 'text-red-400'
+            }`}
+          >
+            {fmtMoney(money.bandFund)}
+          </p>
+          <p className="text-arden-subtext text-[10px] mt-1">
+            {money.hasPayouts ? 'kept for shared costs' : 'no split recorded yet'}
           </p>
         </div>
       </div>
@@ -672,6 +734,15 @@ function ShowDetailContent() {
         isAdmin={isAdmin}
         busy={expensesBusy}
         onChange={persistExpenses}
+      />
+
+      <ShowPayoutsEditor
+        payouts={payouts}
+        netRevenue={money.netRevenue}
+        roster={roster}
+        isAdmin={isAdmin}
+        busy={payoutsBusy}
+        onChange={persistPayouts}
       />
 
       {/* Post-show stats */}

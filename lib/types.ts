@@ -45,6 +45,8 @@ export interface Show {
   expenses?: ShowExpense[]
   /** Walk-ups paid at the door, logged after the show — no names, just totals */
   doorSales?: DoorSales
+  /** How the night's net was split between the members and the shared fund */
+  payouts?: ShowPayouts
   /** Post-show numbers, filled in by the band afterwards */
   stats?: ShowStats
   notes?: string
@@ -122,6 +124,24 @@ export interface DoorSales {
   count: number
   /** Total dollars taken at the door */
   amount: number
+}
+
+/**
+ * How one show's net was divided.
+ *
+ * memberCount is stored per show rather than read from the dashboard roster:
+ * who plays a given night is not the same as who can log in, and a lineup that
+ * changes later must not silently rewrite what an old show paid out.
+ */
+export interface ShowPayouts {
+  /** Dollars handed to each member */
+  perMember: number
+  /** How many members split this show */
+  memberCount: number
+  /** perMember x memberCount, recorded as the amount actually paid */
+  totalPaid: number
+  /** What stayed behind for shared costs, as recorded when the split was made */
+  bandFund: number
 }
 
 /** One line item taken off the top, e.g. { label: 'Door & Sound', amount: 150 } */

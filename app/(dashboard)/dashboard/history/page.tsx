@@ -183,26 +183,39 @@ function HistoryPageContent() {
               ticketRevenue: acc.ticketRevenue + m.ticketRevenue,
               gross: acc.gross + m.gross,
               outgoings: acc.outgoings + m.outgoings,
-              bandPayout: acc.bandPayout + m.bandPayout,
+              netRevenue: acc.netRevenue + m.netRevenue,
+              memberPayouts: acc.memberPayouts + m.memberPayouts,
+              bandFund: acc.bandFund + m.bandFund,
+              unallocated: acc.unallocated + m.unallocated,
             }),
-            { ticketsSold: 0, ticketRevenue: 0, gross: 0, outgoings: 0, bandPayout: 0 }
+            { ticketsSold: 0, ticketRevenue: 0, gross: 0, outgoings: 0, netRevenue: 0, memberPayouts: 0, bandFund: 0, unallocated: 0 }
           )
         if (totals.ticketsSold === 0 && totals.gross === 0 && totals.outgoings === 0) return null
         return (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <StatTile
-              label="Tickets Sold"
-              value={totals.ticketsSold}
-              sub={`${fmtMoney(totals.gross)} taken in`}
-            />
-            <StatTile label="Gross Revenue" value={fmtMoney(totals.gross)} sub="tickets, payouts & merch" />
-            <StatTile label="Expenses" value={fmtMoney(totals.outgoings)} sub="door, sound, venue & costs" />
-            <StatTile
-              label="Band Payout"
-              value={fmtMoney(totals.bandPayout)}
-              sub="all-time, after expenses"
-            />
-          </div>
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+              <StatTile
+                label="Tickets Sold"
+                value={totals.ticketsSold}
+                sub={`${fmtMoney(totals.gross)} taken in`}
+              />
+              <StatTile label="Gross Revenue" value={fmtMoney(totals.gross)} sub="tickets, door, payouts & merch" />
+              <StatTile label="Expenses" value={fmtMoney(totals.outgoings)} sub="door, sound, venue & costs" />
+              <StatTile label="Net Revenue" value={fmtMoney(totals.netRevenue)} sub="gross less expenses" />
+              <StatTile label="Member Payouts" value={fmtMoney(totals.memberPayouts)} sub="paid out to the band" />
+              <StatTile
+                label="Band Fund"
+                value={fmtMoney(totals.bandFund)}
+                sub="balance for shared costs"
+              />
+            </div>
+            {totals.unallocated !== 0 && (
+              <p className="text-arden-subtext text-xs mb-4 leading-relaxed">
+                {fmtMoney(totals.unallocated)} from shows with no split recorded yet — not counted in
+                payouts or the fund.
+              </p>
+            )}
+          </>
         )
       })()}
 
@@ -230,7 +243,8 @@ function HistoryPageContent() {
         ) : (
           <div className="space-y-2">
             {past.map(show => {
-              const sold = showFinancials(show).totalTickets
+              const money = showFinancials(show)
+              const sold = money.totalTickets
               return (
                 <Link
                   key={show.id}
@@ -262,6 +276,14 @@ function HistoryPageContent() {
                       {sold > 0 && (
                         <span className="text-xs px-2 py-0.5 border border-arden-accent/40 text-arden-accent tracking-wider uppercase">
                           {sold} sold
+                        </span>
+                      )}
+                      {money.hasPayouts && (
+                        <span
+                          className="text-xs px-2 py-0.5 border border-arden-border text-arden-subtext tracking-wider uppercase"
+                          title={`${fmtMoney(money.netRevenue)} net · ${fmtMoney(money.memberPayouts)} paid out`}
+                        >
+                          {fmtMoney(money.bandFund)} fund
                         </span>
                       )}
                       {show.status === 'cancelled' && (
