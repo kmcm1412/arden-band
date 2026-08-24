@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/lib/auth/context'
 import { db } from '@/lib/firebase/client'
 import { collection, getDocs, doc, setDoc } from 'firebase/firestore'
@@ -80,31 +80,7 @@ export default function AvailabilityPage() {
 
   const weeks = getCalendarWeeks(weekOffset)
 
-  useEffect(() => {
-    if (!user) return
-    fetchAvailability()
-  }, [user])
-
-  // Close panel on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setSelectedDate(null)
-      }
-    }
-    if (selectedDate) document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [selectedDate])
-
-  const fetchAvailability = async () => {
-    try {
-      await fetchAvailabilityInner()
-    } catch (err) {
-      console.error('Failed to load availability:', err)
-    }
-  }
-
-  const fetchAvailabilityInner = async () => {
+  const fetchAvailabilityInner = useCallback(async () => {
     const snap = await getDocs(collection(db, 'availabilities'))
     const agg: Record<string, { name: string; entries: AvailabilityEntry[] }> = {}
     snap.forEach(docSnap => {
@@ -119,7 +95,34 @@ export default function AvailabilityPage() {
       }
     })
     setAllAvailability(agg)
-  }
+  }, [user])
+
+  // Both memoized on `user`, so the mount effect can list them as dependencies
+  // instead of silently relying on running once
+  const fetchAvailability = useCallback(async () => {
+    try {
+      await fetchAvailabilityInner()
+    } catch (err) {
+      console.error('Failed to load availability:', err)
+    }
+  }, [fetchAvailabilityInner])
+
+  useEffect(() => {
+    if (!user) return
+    fetchAvailability()
+  }, [user, fetchAvailability])
+
+  // Close panel on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setSelectedDate(null)
+      }
+    }
+    if (selectedDate) document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [selectedDate])
+
 
   const entriesForDate = (date: string) => myEntries.filter(e => e.date === date)
 

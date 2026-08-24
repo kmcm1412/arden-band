@@ -19,7 +19,6 @@ import {
   Users,
   Megaphone,
   Menu,
-  X,
   LogOut,
   ExternalLink,
 } from 'lucide-react'

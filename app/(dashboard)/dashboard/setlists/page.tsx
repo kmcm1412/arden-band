@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { db } from '@/lib/firebase/client'
 import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore'
 import { SetList, SetListSong } from '@/lib/types'
@@ -20,18 +20,30 @@ export default function SetlistsPage() {
   const [creating, setCreating] = useState(false)
   const [newTitle, setNewTitle] = useState('')
 
-  useEffect(() => { fetchSetlists() }, [])
-
-  const fetchSetlists = async () => {
+  // Declared before the effect that depends on it: a dependency array is
+  // evaluated when useEffect is called, so referencing it earlier would hit the
+  // temporal dead zone. `selected` is read through the updater rather than the
+  // closure, which keeps this stable and free of a stale read if it is ever
+  // called again after mount.
+  const fetchSetlists = useCallback(async () => {
     try {
       const snap = await getDocs(collection(db, 'setlists'))
       const lists = snap.docs.map(d => ({ id: d.id, ...d.data() } as SetList))
       setSetlists(lists)
-      if (lists.length > 0 && !selected) setSelected(lists[0])
+      setSelected(prev => prev ?? lists[0] ?? null)
     } catch (err) {
       console.error('Failed to load setlists:', err)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    // set-state-in-effect guards against synchronous setState cascading
+    // renders. This is an async load: every setState inside runs in a promise
+    // continuation after the Firestore round trip, never during the effect
+    // body, so that hazard does not apply here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchSetlists()
+  }, [fetchSetlists])
 
   const createSetlist = async () => {
     if (!newTitle.trim()) return

@@ -18,7 +18,12 @@ const eslintConfig = defineConfig([
       "react-hooks/static-components": "off",
       "react-hooks/immutability": "off",
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-vars": "warn",
+      // Leading underscore marks a binding that exists only to be discarded,
+      // such as `const { id: _id, ...rest } = doc` to omit a key
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+      ],
       "react/no-unescaped-entities": "off",
     },
   },

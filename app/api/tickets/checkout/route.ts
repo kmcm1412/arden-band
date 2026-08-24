@@ -19,7 +19,11 @@ const MAX_NAME_LEN = 100
  */
 export async function POST(req: NextRequest) {
   try {
-    if (await isRateLimited(req, { scope: 'tickets', windowMs: 10 * 60 * 1000, max: 30 })) {
+    // 60 rather than 30: this is per IP, and a venue's shared wifi is one IP.
+    // A failed record is silent — the widget still sends the fan to Venmo, so
+    // they pay and the band simply loses the order. Losing real sales data to a
+    // throttle is worse than the scripted writes this is guarding against.
+    if (await isRateLimited(req, { scope: 'tickets', windowMs: 10 * 60 * 1000, max: 60 })) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth/context'
 import { Plus, Check, X, UserCheck, UserX } from 'lucide-react'
 import { Membership } from '@/lib/types'
@@ -16,7 +16,9 @@ function AccessPageContent() {
   const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const fetchMembers = async () => {
+  // Memoized on `user` so the effect below can depend on it honestly: it is
+  // rebuilt only when the signed-in user changes, so no refetch loop
+  const fetchMembers = useCallback(async () => {
     const token = await user?.getIdToken()
     const res = await fetch('/api/admin/members', {
       headers: { Authorization: `Bearer ${token}` },
@@ -25,9 +27,11 @@ function AccessPageContent() {
       const data = await res.json()
       setMembers(data.members)
     }
-  }
+  }, [user])
 
-  useEffect(() => { if (user) fetchMembers() }, [user])
+  useEffect(() => {
+    if (user) fetchMembers()
+  }, [user, fetchMembers])
 
   const handleAdd = async () => {
     if (!form.email) return
