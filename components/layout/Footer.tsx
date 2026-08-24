@@ -64,7 +64,11 @@ export default async function Footer() {
 
           <nav className="flex items-center gap-6 text-xs tracking-wider uppercase text-arden-subtext">
             {footerLinks.map(l => (
-              <Link key={l.href} href={l.href} className="hover:text-arden-text transition-colors">
+              <Link
+                key={l.href}
+                href={l.href}
+                className="flex items-center min-h-[44px] hover:text-arden-text transition-colors"
+              >
                 {l.label}
               </Link>
             ))}

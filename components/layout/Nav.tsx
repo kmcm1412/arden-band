@@ -43,7 +43,7 @@ export default function Nav({ visibility }: { visibility: SectionVisibility }) {
       <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link
           href="/"
-          className="font-display text-xl font-bold tracking-widest text-arden-white hover:text-arden-accent transition-colors"
+          className="font-display text-xl font-bold tracking-widest text-arden-white hover:text-arden-accent transition-colors flex items-center min-h-[44px]"
           style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}
         >
           ARDEN

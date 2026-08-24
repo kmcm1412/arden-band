@@ -127,7 +127,7 @@ function HeroContent({
             href={s.href}
             target="_blank"
             rel="me noopener noreferrer"
-            className="group flex items-center gap-2 py-2.5 -my-2.5 text-arden-subtext hover:text-arden-accent transition-colors"
+            className="group flex items-center gap-2 min-h-[44px] -my-3 text-arden-subtext hover:text-arden-accent transition-colors"
           >
             {s.icon}
             <span className="text-xs tracking-widest uppercase">{s.label}</span>
@@ -284,7 +284,7 @@ export default async function HomePage() {
             <p className="text-arden-text leading-relaxed text-lg">{bio}</p>
             <Link
               href="/about"
-              className="inline-flex items-center gap-2 mt-6 py-2.5 -my-2.5 text-sm text-arden-accent hover:text-arden-white transition-colors uppercase tracking-wider"
+              className="inline-flex items-center gap-2 mt-6 min-h-[44px] -my-2 text-sm text-arden-accent hover:text-arden-white transition-colors uppercase tracking-wider"
             >
               Read More <ArrowRight size={14} />
             </Link>
@@ -303,7 +303,7 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/media"
-                className="flex items-center gap-2 py-2.5 -my-2.5 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider flex-shrink-0"
+                className="flex items-center gap-2 min-h-[44px] -my-2 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider flex-shrink-0"
               >
                 All Videos <ArrowRight size={14} />
               </Link>
@@ -414,7 +414,7 @@ export default async function HomePage() {
                 href={soundcloudUrl}
                 target="_blank"
                 rel="me noopener noreferrer"
-                className="flex items-center gap-2 py-2.5 -my-2.5 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider flex-shrink-0"
+                className="flex items-center gap-2 min-h-[44px] -my-2 text-sm text-arden-subtext hover:text-arden-accent transition-colors uppercase tracking-wider flex-shrink-0"
               >
                 Full Profile <ArrowRight size={14} />
               </a>

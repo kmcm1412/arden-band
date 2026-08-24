@@ -67,7 +67,7 @@ export default function SubscribeForm() {
           aria-label="Your name"
           autoComplete="name"
           required
-          className="w-full bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
+          className="w-full bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 min-h-[44px] text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
         />
         <div className="flex flex-col sm:flex-row gap-2">
           <input
@@ -78,12 +78,12 @@ export default function SubscribeForm() {
             aria-label="Email address"
             autoComplete="email"
             required
-            className="flex-1 bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
+            className="flex-1 bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 min-h-[44px] text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
           />
           <button
             type="submit"
             disabled={status === 'loading'}
-            className="btn-primary text-xs py-2.5 px-5 disabled:opacity-50 whitespace-nowrap"
+            className="btn-primary text-xs py-2.5 px-5 min-h-[44px] disabled:opacity-50 whitespace-nowrap"
           >
             {status === 'loading' ? 'Saving...' : 'Stay Updated'} <ArrowRight size={14} />
           </button>
@@ -94,7 +94,7 @@ export default function SubscribeForm() {
         <button
           type="button"
           onClick={() => setShowPhone(true)}
-          className="text-xs text-arden-border hover:text-arden-subtext transition-colors"
+          className="inline-flex items-center min-h-[44px] text-xs text-arden-border hover:text-arden-subtext transition-colors"
         >
           + Add phone for SMS updates (optional)
         </button>
@@ -108,7 +108,7 @@ export default function SubscribeForm() {
           placeholder="+1 (555) 000-0000 — SMS updates (optional)"
           aria-label="Phone number for SMS updates (optional)"
           autoComplete="tel"
-          className="mt-1 w-full bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
+          className="mt-1 w-full bg-arden-dark border border-arden-border text-arden-text px-4 py-2.5 min-h-[44px] text-sm focus:outline-none focus:border-arden-accent placeholder:text-arden-border"
         />
       )}
 
