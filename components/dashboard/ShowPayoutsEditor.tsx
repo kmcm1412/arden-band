@@ -10,6 +10,8 @@ import { fmtMoney, roundMoney } from '@/lib/utils'
 interface Draft {
   perMember: number
   memberCount: number
+  /** undefined = nobody marked yet; never presumed from the roster */
+  paidUids?: string[]
 }
 
 /**
@@ -18,8 +20,10 @@ interface Draft {
  * The member count is entered rather than counted from the dashboard roster:
  * logging in and playing the show are different things, and a lineup that
  * changes later must not silently rewrite what an old night paid out. The
- * roster is shown alongside as a reference, and any disagreement with the count
- * is surfaced instead of reconciled behind the scenes.
+ * roster renders as toggles so the split names exactly who was paid — having a
+ * dashboard login never implies inclusion. The count follows the selection but
+ * can be raised past it for subs or guests without accounts, and any
+ * disagreement is surfaced instead of reconciled behind the scenes.
  */
 export default function ShowPayoutsEditor({
   payouts,
@@ -44,6 +48,7 @@ export default function ShowPayoutsEditor({
   const [draft, setDraft] = useState<Draft>({
     perMember: payouts?.perMember ?? 0,
     memberCount: payouts?.memberCount ?? DEFAULT_BAND_SIZE,
+    paidUids: payouts?.paidUids,
   })
 
   // Re-sync when the show reloads underneath us, during render not in an effect
@@ -53,6 +58,7 @@ export default function ShowPayoutsEditor({
     setDraft({
       perMember: payouts?.perMember ?? 0,
       memberCount: payouts?.memberCount ?? DEFAULT_BAND_SIZE,
+      paidUids: payouts?.paidUids,
     })
   }
 
@@ -62,19 +68,51 @@ export default function ShowPayoutsEditor({
   const bandFund = roundMoney(netRevenue - totalPaid)
   const overdrawn = totalPaid > netRevenue
 
-  const commit = () => {
-    const next: ShowPayouts = { perMember, memberCount, totalPaid, bandFund }
-    if (
-      next.perMember !== payouts?.perMember ||
-      next.memberCount !== payouts?.memberCount ||
-      next.totalPaid !== payouts?.totalPaid ||
-      next.bandFund !== payouts?.bandFund
-    ) {
-      onChange(next)
+  const buildNext = (d: Draft): ShowPayouts => {
+    const pm = roundMoney(d.perMember || 0)
+    const mc = Math.max(0, Math.floor(d.memberCount || 0))
+    return {
+      perMember: pm,
+      memberCount: mc,
+      totalPaid: roundMoney(pm * mc),
+      bandFund: roundMoney(netRevenue - roundMoney(pm * mc)),
+      // Firestore rejects undefined — the field only exists once someone is marked
+      ...(d.paidUids ? { paidUids: d.paidUids } : {}),
     }
   }
 
+  const changed = (next: ShowPayouts) =>
+    next.perMember !== payouts?.perMember ||
+    next.memberCount !== payouts?.memberCount ||
+    next.totalPaid !== payouts?.totalPaid ||
+    next.bandFund !== payouts?.bandFund ||
+    JSON.stringify(next.paidUids ?? null) !== JSON.stringify(payouts?.paidUids ?? null)
+
+  const commit = () => {
+    const next = buildNext(draft)
+    if (changed(next)) onChange(next)
+  }
+
+  /** Chip toggle saves immediately — there is no blur moment to commit on */
+  const togglePaid = (uid: string) => {
+    const current = draft.paidUids ?? []
+    const nextUids = current.includes(uid) ? current.filter(u => u !== uid) : [...current, uid]
+    // Count follows the selection. Any manual overage (subs/guests without
+    // logins) is preserved; the very first selection starts the count fresh.
+    const guestOverage =
+      draft.paidUids !== undefined ? Math.max(0, draft.memberCount - current.length) : 0
+    const nextDraft: Draft = {
+      ...draft,
+      paidUids: nextUids,
+      memberCount: nextUids.length + guestOverage,
+    }
+    setDraft(nextDraft)
+    const next = buildNext(nextDraft)
+    if (changed(next)) onChange(next)
+  }
+
   const active = (roster || []).filter(m => m.active)
+  const marked = draft.paidUids !== undefined
 
   return (
     <div className="mb-10">
@@ -175,24 +213,63 @@ export default function ShowPayoutsEditor({
         {active.length > 0 && (
           <div className="mt-4 pt-4 border-t border-arden-border">
             <p className="text-arden-subtext text-[10px] tracking-widest uppercase mb-2">
-              Dashboard members
+              Who got paid
             </p>
-            <ul className="flex flex-wrap gap-x-4 gap-y-1">
-              {active.map(m => (
-                <li key={m.uid} className="text-arden-text text-sm">
-                  {m.displayName || m.email}
-                  {perMember > 0 && (
-                    <span className="text-arden-subtext"> · {fmtMoney(perMember)}</span>
-                  )}
-                </li>
-              ))}
+            <ul className="flex flex-wrap gap-2">
+              {active.map(m => {
+                const isPaid = (draft.paidUids ?? []).includes(m.uid)
+                const name = m.displayName || m.email
+                return (
+                  <li key={m.uid}>
+                    <button
+                      type="button"
+                      disabled={!isAdmin || busy}
+                      onClick={() => togglePaid(m.uid)}
+                      aria-pressed={isPaid}
+                      className={`px-3 py-1.5 text-sm border transition-colors disabled:cursor-default ${
+                        isPaid
+                          ? 'border-arden-accent text-arden-accent bg-arden-accent/10'
+                          : 'border-arden-border text-arden-subtext hover:border-arden-muted'
+                      }`}
+                    >
+                      {name}
+                      {isPaid && perMember > 0 && (
+                        <span className="font-mono"> · {fmtMoney(perMember)}</span>
+                      )}
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
-            {memberCount !== active.length && (
+            {!marked ? (
               <p className="text-arden-subtext text-xs mt-2 leading-relaxed">
-                This show splits {memberCount} way{memberCount === 1 ? '' : 's'} but {active.length}{' '}
-                member{active.length === 1 ? ' is' : 's are'} on the dashboard — the split above is
-                what counts.
+                {isAdmin
+                  ? 'Nobody is marked as paid yet — tap the members who took part in this split. Being on the dashboard doesn’t put anyone in it.'
+                  : 'Nobody has been marked as paid for this show yet.'}
               </p>
+            ) : (
+              (() => {
+                const selected = (draft.paidUids ?? []).length
+                const diff = memberCount - selected
+                if (diff > 0) {
+                  return (
+                    <p className="text-arden-subtext text-xs mt-2 leading-relaxed">
+                      {selected} marked here, but the split counts {memberCount} ways — the extra{' '}
+                      {diff === 1 ? 'share covers a sub or guest' : `${diff} shares cover subs or guests`}{' '}
+                      without dashboard accounts.
+                    </p>
+                  )
+                }
+                if (diff < 0) {
+                  return (
+                    <p className="text-red-400 text-xs mt-2 leading-relaxed">
+                      {selected} members are marked paid but the split only counts {memberCount} —
+                      raise the count or unmark someone.
+                    </p>
+                  )
+                }
+                return null
+              })()
             )}
           </div>
         )}

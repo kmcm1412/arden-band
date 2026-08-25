@@ -153,6 +153,13 @@ export interface ShowPayouts {
   totalPaid: number
   /** What stayed behind for shared costs, as recorded when the split was made */
   bandFund: number
+  /**
+   * Which dashboard members were part of this show's split. Absent on older
+   * records and until an admin marks who played — nobody is presumed paid just
+   * for having a login. memberCount can exceed this list when subs or guests
+   * without dashboard accounts were paid.
+   */
+  paidUids?: string[]
 }
 
 /** A link to audio or video of the show. Not financial — saves without review. */
