@@ -110,10 +110,11 @@ export function roundMoney(n: number): number {
   return Math.round(n * 100) / 100
 }
 
-/** "$10" for whole dollars, "$22.50" otherwise */
+/** "$10" for whole dollars, "$22.50" otherwise, "-$50" when negative */
 export function fmtMoney(n: number): string {
-  const r = roundMoney(n)
-  return Number.isInteger(r) ? `$${r}` : `$${r.toFixed(2)}`
+  const r = roundMoney(Math.abs(n))
+  const formatted = Number.isInteger(r) ? `$${r}` : `$${r.toFixed(2)}`
+  return roundMoney(n) < 0 ? `-${formatted}` : formatted
 }
 
 export function formatDateTime(dateString: string) {

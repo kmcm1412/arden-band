@@ -96,16 +96,19 @@ export default function ShowPayoutsEditor({
   /** Chip toggle saves immediately — there is no blur moment to commit on */
   const togglePaid = (uid: string) => {
     const current = draft.paidUids ?? []
-    const nextUids = current.includes(uid) ? current.filter(u => u !== uid) : [...current, uid]
-    // Count follows the selection. Any manual overage (subs/guests without
-    // logins) is preserved; the very first selection starts the count fresh.
-    const guestOverage =
-      draft.paidUids !== undefined ? Math.max(0, draft.memberCount - current.length) : 0
-    const nextDraft: Draft = {
-      ...draft,
-      paidUids: nextUids,
-      memberCount: nextUids.length + guestOverage,
-    }
+    const removing = current.includes(uid)
+    const nextUids = removing ? current.filter(u => u !== uid) : [...current, uid]
+    // Count follows the selection, direction-aware. Naming another payee fills
+    // an unnamed (guest) share before growing the total; unmarking someone
+    // means one fewer person was paid, never a new phantom guest. The very
+    // first selection starts the count fresh from that person alone.
+    const memberCount =
+      draft.paidUids === undefined
+        ? nextUids.length
+        : removing
+          ? Math.max(nextUids.length, draft.memberCount - 1)
+          : Math.max(draft.memberCount, nextUids.length)
+    const nextDraft: Draft = { ...draft, paidUids: nextUids, memberCount }
     setDraft(nextDraft)
     const next = buildNext(nextDraft)
     if (changed(next)) onChange(next)

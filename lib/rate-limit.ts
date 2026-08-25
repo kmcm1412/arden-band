@@ -55,15 +55,21 @@ export async function isRateLimited(
     const ip = clientIp(req).replace(/[^a-zA-Z0-9.:_-]/g, '')
     const ref = adminDb.collection('rateLimits').doc(`${scope}:${ip}`)
     const now = Date.now()
-    const snap = await ref.get()
-    const data = snap.data()
 
-    if (data && now - data.windowStart < windowMs) {
-      if (data.count >= max) return true
-      await ref.update({ count: data.count + 1 })
-    } else {
-      await ref.set({ count: 1, windowStart: now })
-    }
+    // Transactional so concurrent requests can't both read count 4 and both
+    // pass a limit of 5 — the check and the increment land together
+    const limited = await adminDb.runTransaction(async txn => {
+      const snap = await txn.get(ref)
+      const data = snap.data()
+      if (data && now - data.windowStart < windowMs) {
+        if (data.count >= max) return true
+        txn.update(ref, { count: data.count + 1 })
+      } else {
+        txn.set(ref, { count: 1, windowStart: now })
+      }
+      return false
+    })
+    if (limited) return true
 
     if (Math.random() < 1 / PRUNE_ODDS) void pruneExpired()
     return false

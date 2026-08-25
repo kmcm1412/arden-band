@@ -88,9 +88,10 @@ export function describeValue(field: PendingEditField, value: unknown): string {
       return `${v.length} item${v.length === 1 ? '' : 's'} totalling ${money(total)}`
     }
     case 'payouts': {
-      const v = value as { perMember?: number; memberCount?: number; totalPaid?: number }
+      const v = value as { perMember?: number; memberCount?: number; totalPaid?: number; paidUids?: string[] }
       if (!v.perMember && !v.memberCount) return 'no split recorded'
-      return `${money(v.perMember || 0)} x ${v.memberCount || 0} = ${money(v.totalPaid || 0)}`
+      const base = `${money(v.perMember || 0)} x ${v.memberCount || 0} = ${money(v.totalPaid || 0)}`
+      return v.paidUids?.length ? `${base} · ${v.paidUids.length} member${v.paidUids.length === 1 ? '' : 's'} marked` : base
     }
     case 'ticketSales': {
       const v = value as { qty?: number; amount?: number }[]

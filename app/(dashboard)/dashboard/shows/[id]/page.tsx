@@ -271,14 +271,37 @@ function ShowDetailContent() {
     }
   }
 
+  /**
+   * Transactional write for any financial field + its review flag.
+   *
+   * pendingEdits is recomputed from the transaction snapshot, not local state:
+   * two people saving different sections at once must not clobber each other's
+   * awaiting-review entries (the value would survive but the flag demanding a
+   * second signature would silently vanish).
+   */
+  const persistWithReview = async (
+    field: PendingEditField,
+    fieldKey: string,
+    next: unknown
+  ): Promise<PendingEdit[]> => {
+    const ref = doc(db, 'shows', show!.id!)
+    return runTransaction(db, async txn => {
+      const snap = await txn.get(ref)
+      const currentPending = (snap.data()?.pendingEdits || []) as PendingEdit[]
+      const previous = snap.data()?.[fieldKey] ?? null
+      const nextPending = nextPendingEdits(field, previous, next, currentPending)
+      txn.update(ref, { [fieldKey]: next, pendingEdits: nextPending })
+      return nextPending
+    })
+  }
+
   // Saved on edit rather than behind a save button, matching the sales toggle
   const persistExpenses = async (next: ShowExpense[]) => {
     if (!show?.id) return
     setExpensesBusy(true)
     setError('')
     try {
-      const nextPending = nextPendingEdits('expenses', expenses, next, pendingEdits)
-      await updateDoc(doc(db, 'shows', show.id), { expenses: next, pendingEdits: nextPending })
+      const nextPending = await persistWithReview('expenses', 'expenses', next)
       setShow(s => (s ? { ...s, expenses: next, pendingEdits: nextPending } : s))
       const total = next.reduce((n, e) => n + (e.amount || 0), 0)
       logActivity(user, 'updated show expenses', `${show.venue} · ${fmtMoney(total)} deducted`)
@@ -297,8 +320,7 @@ function ShowDetailContent() {
     setDoorBusy(true)
     setError('')
     try {
-      const nextPending = nextPendingEdits('doorSales', show.doorSales ?? null, next, pendingEdits)
-      await updateDoc(doc(db, 'shows', show.id), { doorSales: next, pendingEdits: nextPending })
+      const nextPending = await persistWithReview('doorSales', 'doorSales', next)
       setShow(s => (s ? { ...s, doorSales: next, pendingEdits: nextPending } : s))
       logActivity(
         user,
@@ -319,8 +341,7 @@ function ShowDetailContent() {
     setPayoutsBusy(true)
     setError('')
     try {
-      const nextPending = nextPendingEdits('payouts', show.payouts ?? null, next, pendingEdits)
-      await updateDoc(doc(db, 'shows', show.id), { payouts: next, pendingEdits: nextPending })
+      const nextPending = await persistWithReview('payouts', 'payouts', next)
       setShow(s => (s ? { ...s, payouts: next, pendingEdits: nextPending } : s))
       logActivity(
         user,
@@ -503,8 +524,7 @@ function ShowDetailContent() {
       const clean = Object.fromEntries(
         Object.entries(statsForm).filter(([, v]) => v !== undefined && v !== '')
       )
-      const nextPending = nextPendingEdits('stats', show.stats ?? null, clean, pendingEdits)
-      await updateDoc(doc(db, 'shows', show.id), { stats: clean, pendingEdits: nextPending })
+      const nextPending = await persistWithReview('stats', 'stats', clean)
       setShow(s => (s ? { ...s, stats: clean as ShowStats, pendingEdits: nextPending } : s))
       logActivity(user, 'updated show stats', show.venue)
       setStatsSaved(true)
